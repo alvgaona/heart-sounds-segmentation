@@ -1,1 +1,1 @@
-# heart-sounds-segmentation
+# Heart Sounds Segmentation
