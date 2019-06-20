@@ -1,0 +1,29 @@
+function [net, predTrain, predTest] = runClassification(frames, fsstTrain, fsstTest)
+        layers = [ ...
+        sequenceInputLayer(44)
+        bilstmLayer(200,'OutputMode','sequence')
+        fullyConnectedLayer(100)
+        dropoutLayer(0.2)
+        bilstmLayer(100,'OutputMode','sequence')
+        fullyConnectedLayer(50)
+        dropoutLayer(0.2)
+        bilstmLayer(50,'OutputMode','sequence')
+        fullyConnectedLayer(4)
+        dropoutLayer(0.5)
+        softmaxLayer
+        classificationLayer];
+
+    options = trainingOptions('adam', ...
+        'MaxEpochs',10, ...
+        'MiniBatchSize',50, ...
+        'InitialLearnRate',0.01, ...
+        'LearnRateDropPeriod',3, ...
+        'LearnRateSchedule','piecewise', ...
+        'GradientThreshold',1, ...
+        'Plots','training-progress',...
+        'Verbose',1);
+    
+    net = trainNetwork(fsstTrain,frames.framedLabelsTrain,layers,options);
+    predTrain = classify(net,fsstTrain,'MiniBatchSize',20);
+    predTest = classify(net,fsstTest,'MiniBatchSize',20);
+end
