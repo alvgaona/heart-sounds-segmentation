@@ -1,8 +1,21 @@
 \chapter{Conclusiones generales}
 
-\indent Este trabajo muestra que la correcta selección de atributos adecuado, acompañado de un modelo relativamente simple en la etapa de clasificación, alcanza para obtener una efectividad muy cercana a la del estado del arte. En el cuadro \ref{tab:performance-comparison} se ve que, entre los cuatro algoritmos más famosos en la segmentación de \acrshort{pcg}, el de F. Renna y M. Coimbra \cite{pp:renna2018} obtiene las mejores métricas. Éste se basa en el mismo preprocesamiento (acondicionamiento de la señal) y extracción de atributos de los \acrshort{pcg} que Springer \textit{et al.} \cite{pp:springer2015}, el cual utiliza los métodos propuestos por Schmidt \cite{pp:schmidt2010} mejorando algunos de los algoritmos. \\
-\indent El presente trabajo utiliza, ya explicado en capítulos anteriores, una DNN con una arquitectura muy simple. Ésta, se ha visto, que contiene sólo una capa recurrente \acrshort{lstm} y diferentes capas intermedias que ayudan a la clasificación. De esta manera, se alcanzan métricas muy cercanas al estado del arte con una buena elección atributos. En cuanto a la exactitud ($Acc$) queda en segundo lugar pero carece de eficiencia en el resto de las métricas, precisión ($P_+$) y sensibilidad $Se$. \\
-\indent La arquitectura de la red \acrshort{lstm} es relativamente simple en comparación con otras arquitecturas, por ejemplo U-Net, de caracter convolucional, donde se aplican mayores grados de profundidad en cuanto a las capas. Por otro lado, posee antecedentes en cuanto a la aplicación de distintos problemas de segmentación. Un ejemplo es el conteo de células, detección y morfometría por medio de imágenes.
+\indent Este trabajo muestra que la correcta selección de atributos adecuado, acompañado de un modelo relativamente
+simple en la etapa de clasificación, alcanza para obtener una efectividad muy cercana a la del estado del arte. En
+el cuadro \ref{tab:performance-comparison} se ve que, entre los cuatro algoritmos más famosos en la segmentación de
+\acrshort{pcg}, el de F. Renna y M. Coimbra \cite{pp:renna2018} obtiene las mejores métricas. Éste se basa en el
+mismo preprocesamiento (acondicionamiento de la señal) y extracción de atributos de los \acrshort{pcg} que Springer
+\textit{et al.} \cite{pp:springer2015}, el cual utiliza los métodos propuestos por Schmidt \cite{pp:schmidt2010}
+mejorando algunos de los algoritmos. \\
+\indent El presente trabajo utiliza, ya explicado en capítulos anteriores, una DNN con una arquitectura muy simple.
+Ésta, se ha visto, que contiene sólo una capa recurrente \acrshort{lstm} y diferentes capas intermedias que ayudan a
+la clasificación. De esta manera, se alcanzan métricas muy cercanas al estado del arte con una buena elección
+atributos. En cuanto a la exactitud ($Acc$) queda en segundo lugar pero carece de eficiencia en el resto de las
+métricas, precisión ($P_+$) y sensibilidad $Se$. \\
+\indent La arquitectura de la red \acrshort{lstm} es relativamente simple en comparación con otras arquitecturas,
+por ejemplo U-Net, de caracter convolucional, donde se aplican mayores grados de profundidad en cuanto a las capas.
+Por otro lado, posee antecedentes en cuanto a la aplicación de distintos problemas de segmentación. Un ejemplo es el
+conteo de células, detección y morfometría por medio de imágenes.
 
 \section{Tiempo de procesamiento}
 

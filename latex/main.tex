@@ -106,34 +106,33 @@
 \newacronym{lstm}{LSTM}{Long Short-Term Memory}
 \newacronym{sgd}{SGD}{Stochastic Gradient Descent}
 
-
 \usepackage{lmodern}
 
 \begin{document}
+  \sloppy
+  \hbadness=99999
+  % Set pages
+  \setcounter{page}{1}
+  \setcounter{section}{0}
 
-% Set pages
-\setcounter{page}{1}
-\setcounter{section}{0}
-
-\input{sections/cover.tex}
-\input{sections/summary.tex}
-\afterpage{\null\newpage}
-\tableofcontents
-\printglossary[type=\acronymtype,title=Acrónimos,toctitle=Acrónimos]
-\afterpage{\null\newpage}
-\input{sections/chapter-01/chapter-01.tex}
-\input{sections/chapter-02/chapter-02.tex}
-\input{sections/chapter-03/chapter-03.tex}
-\input{sections/chapter-04/chapter-04.tex}
-\input{sections/chapter-05/chapter-05.tex}
-\input{sections/chapter-06/chapter-06.tex}
-\input{sections/chapter-07/chapter-07.tex}
-\input{sections/chapter-08/chapter-08.tex}
-\input{sections/chapter-09/chapter-09.tex}
-\afterpage{\null\newpage}
-\listoffigures
-\listoftables
-\afterpage{\null\newpage}
-\input{bibliography.tex}
-
+  \input{sections/cover.tex}
+  \input{sections/summary.tex}
+  \afterpage{\null\newpage}
+  \tableofcontents
+  \printglossary[type=\acronymtype,title=Acrónimos,toctitle=Acrónimos]
+  \afterpage{\null\newpage}
+  \input{sections/chapter-01/chapter-01.tex}
+  \input{sections/chapter-02/chapter-02.tex}
+  \input{sections/chapter-03/chapter-03.tex}
+  \input{sections/chapter-04/chapter-04.tex}
+  \input{sections/chapter-05/chapter-05.tex}
+  \input{sections/chapter-06/chapter-06.tex}
+  \input{sections/chapter-07/chapter-07.tex}
+  \input{sections/chapter-08/chapter-08.tex}
+  \input{sections/chapter-09/chapter-09.tex}
+  \afterpage{\null\newpage}
+  \listoffigures
+  \listoftables
+  \afterpage{\null\newpage}
+  \input{bibliography.tex}
 \end{document}

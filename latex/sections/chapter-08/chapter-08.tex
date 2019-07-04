@@ -4,98 +4,98 @@
 
 \indent Ya se ha mencionado la necesidad de realizar comparaciones con diferentes algoritmos que tratan de resolver el problema de segmentación de fonocardiogramas a través de un entrenamiento supervisado con diferentes modelos como han de ser redes neuronales convolucionales y cadenas ocultas de Markov, entre otros. \bigskip
 
-\indent Los resultados se ilustran en los siguientes cuadros donde se ha aplicado la técnica \textit{10-Folds} para cada estado y luego se ha promediado entre todos ellos. La cantidad de atributos extraídos para el entrenamiento ha sido de 44 para un set de datos de 734, 590 y 269 señales tomando segmentos de 2 ms, 3 ms y 5 ms respectivamente. De esta manera la relación de señales-atributos, en el peor caso, es de 6.11 y en el mejor caso, es de 16.68. Esta relación es un índice de generalización del modelo, donde en la literatura y en el campo de la investigación, 10 es el valor mínimo aceptable. 
+\indent Los resultados se ilustran en los siguientes cuadros donde se ha aplicado la técnica \textit{10-Folds} para cada estado y luego se ha promediado entre todos ellos. La cantidad de atributos extraídos para el entrenamiento ha sido de 44 para un set de datos de 734, 590 y 269 señales tomando segmentos de 2 ms, 3 ms y 5 ms respectivamente. De esta manera la relación de señales-atributos, en el peor caso, es de 6.11 y en el mejor caso, es de 16.68. Esta relación es un índice de generalización del modelo, donde en la literatura y en el campo de la investigación, 10 es el valor mínimo aceptable.
 
 \begin{table}[H]
-	\centering
-    \begin{tabularx}{\textwidth}{|X|l|l|l|l|l|}
-    	\hline 
-        Número de señales & L & $F_1$ & $Acc$ & $P_+$ & $Se$ \\
-        \hline
-        \thead{269} & \thead{5 ms} & \thead{$\textcolor{gray}{87.3 \pm 3.2}$ \\ $81.4 \pm 4.0$} & \thead{$\textcolor{gray}{95.6 \pm 2.0}$ \\ $93.5 \pm 3.7$} & \thead{$\textcolor{gray}{87.9 \pm 2.2}$ \\ $81.5 \pm 2.5$} & \thead{$\textcolor{gray}{86.6 \pm 2.1}$ \\ $81.4 \pm 2.8$} \\
-        \hline
-        \thead{590} & \thead{3 ms} & \thead{$\textcolor{gray}{88.6 \pm 3.4}$ \\ $82.4 \pm 3.8$} & \thead{$\textcolor{gray}{96.0 \pm 1.9}$ \\ $93.7 \pm 2.1$} & \thead{$\textcolor{gray}{89.2 \pm 2.2}$ \\ $82.6 \pm 2.9$} & \thead{$\textcolor{gray}{88.0 \pm 1.8}$ \\ $82.2 \pm 2.1$} \\               
-        \hline
-        \thead{734} & \thead{2 ms} & \thead{$\textcolor{gray}{88.2 \pm 2.3}$ \\ $83.7 \pm 2.9$} & \thead{$\textcolor{gray}{95.9 \pm 1.7}$ \\ $94.2 \pm 3.1$} & \thead{$\textcolor{gray}{88.1 \pm 3.4}$ \\ $83.0 \pm 4.1$} & \thead{$\textcolor{gray}{88.3 \pm 2.2}$ \\ $84.5 \pm 2.3$} \\     
-        \hline
-    \end{tabularx}
-    
-    \caption[Tabla con las métricas para el sonido 1 (S1)]{Tabla con las métricas para el sonido 1 (S1). L es el largo de la ventana elegida sin solapamiento. $F_1$ es el promedio armónico, \textit{Acc} es la exactitud, $P_+$ es lo que se conoce como precision y Se es la sensibilidad.}
-    
-\end{table}
-    
-\begin{table}[H]
-	\centering
-    \begin{tabularx}{\textwidth}{|X|l|l|l|l|l|}
-    	\hline 
-        Número de señales & L & $F_1$ & $Acc$ & $P_+$ & $Se$ \\
-        \hline
-        \thead{269} & \thead{5 ms} & \thead{$\textcolor{gray}{89.6 \pm 3.3}$ \\ $81.4 \pm 3.5$} & \thead{$\textcolor{gray}{95.2 \pm 3.1}$ \\ $92.9 \pm 3.4$} & \thead{$\textcolor{gray}{89.7 \pm 2.3}$ \\ $82.1 \pm 2.7$} & \thead{$\textcolor{gray}{89.6 \pm 2.1}$ \\ $80.7 \pm 2.7$} \\
-        \hline
-        \thead{590} & \thead{3 ms} & \thead{$\textcolor{gray}{90.7 \pm 1.4}$ \\ $82.9 \pm 2.2$} & \thead{$\textcolor{gray}{95.7 \pm 2.0}$ \\ $92.1 \pm 2.4$} & \thead{$\textcolor{gray}{91.5 \pm 2.1}$ \\ $83.7 \pm 2.7$} & \thead{$\textcolor{gray}{89.9 \pm 2.9}$ \\ $82.1 \pm 3.1$} \\               
-        \hline
-        \thead{734} & \thead{2 ms} & \thead{$\textcolor{gray}{89.5 \pm 2.6}$ \\ $84.0 \pm 2.9$} & \thead{$\textcolor{gray}{95.2 \pm 1.0}$ \\ $92.6 \pm 1.8$} & \thead{$\textcolor{gray}{90.8 \pm 2.1}$ \\ $85.6 \pm 2.5$} & \thead{$\textcolor{gray}{88.3 \pm 3.2}$ \\ $82.5 \pm 3.5$} \\     
-        \hline
-    \end{tabularx}
-    
-    \caption[Tabla con las métricas para el sístole isovolumétrico (Sys)]{Tabla con las métricas para el sístole isovolumétrico (Sys). L es el largo de la ventana elegida sin solapamiento. $F_1$ es el promedio armónico, Acc es la exactitud, $P_+$ es lo que se conoce como precision y Se es la sensibilidad.}
-    
-\end{table}
-    
-\begin{table}[H]
-	\centering
-    \begin{tabularx}{\textwidth}{|X|l|l|l|l|l|}
-    	\hline 
-        Número de señales & L & $F_1$ & $Acc$ & $P_+$ & $Se$ \\
-        \hline
-        \thead{269} & \thead{5 ms} & \thead{$\textcolor{gray}{87.4 \pm 3.6}$ \\ $81.4 \pm 3.9$} & \thead{$\textcolor{gray}{96.8 \pm 3.1}$ \\ $95.4 \pm 3.5$} & \thead{$\textcolor{gray}{88.1 \pm 2.7}$ \\ $82.1 \pm 3.0$} & \thead{$\textcolor{gray}{86.7 \pm 2.2}$ \\ $80.7 \pm 2.5$} \\           
-        \hline
-        \thead{590} & \thead{3 ms} & \thead{$\textcolor{gray}{88.8 \pm 1.9}$ \\ $80.1 \pm 2.3$} & \thead{$\textcolor{gray}{97.2 \pm 2.0}$ \\ $95.0 \pm 2.7$} & \thead{$\textcolor{gray}{89.5 \pm 2.9}$ \\ $82.1 \pm 3.1$} & \thead{$\textcolor{gray}{88.2 \pm 3.1}$ \\ $78.2 \pm 3.4$} \\ 
-        
-        \hline
-        \thead{734} & \thead{2 ms} &
-        \thead{$\textcolor{gray}{88.8 \pm 1.9}$ \\ $83.8 \pm 2.1$} & \thead{$\textcolor{gray}{97.2 \pm 2.1}$ \\ $95.9 \pm 2.2$} & \thead{$\textcolor{gray}{89.7 \pm 2.5}$ \\ $84.5 \pm 3.1$} & \thead{$\textcolor{gray}{87.9 \pm 2.8}$ \\ $83.2 \pm 3.0$} \\    
-        \hline
-    \end{tabularx}
-    
-    \caption[Tabla con las métricas para el sonido 2 (S2)]{Tabla con las métricas para el sonido 2 (S2). L es el largo de la ventana elegida sin solapamiento.  $F_1$ es el promedio armónico, Acc es la exactitud, $P_+$ es lo que se conoce como precision y Se es la sensibilidad.}
-    
-\end{table}
-    
-\begin{table}[H]
-	\centering
-    \begin{tabularx}{\textwidth}{|X|l|l|l|l|l|}
-    	\hline 
-        Número de señales & L & $F_1$ & $Acc$ & $P_+$ & $Se$ \\
-        \hline
-        \thead{269} & \thead{5 ms} & \thead{$\textcolor{gray}{95.0 \pm 1.7}$ \\ $91.9 \pm 2.1$} & \thead{$\textcolor{gray}{94.9 \pm 2.1}$ \\ $91.6 \pm 2.5$} & \thead{$\textcolor{gray}{94.6 \pm 1.9}$ \\ $90.9 \pm 2.1$} & \thead{$\textcolor{gray}{95.5 \pm 1.5}$ \\ $93.0 \pm 2.1$} \\        
-        \hline
-        \thead{590} & \thead{3 ms} & \thead{$\textcolor{gray}{95.2 \pm 1.3}$ \\ $90.7 \pm 1.9$} & \thead{$\textcolor{gray}{95.1 \pm 2.0}$ \\ $90.2 \pm 2.1$} & \thead{$\textcolor{gray}{94.5 \pm 2.1}$ \\ $89.7 \pm 2.3$} & \thead{$\textcolor{gray}{96.0 \pm 1.5}$ \\ $91.6 \pm 2.0$} \\               
-        \hline
-        \thead{734} & \thead{2 ms} & \thead{$\textcolor{gray}{94.7 \pm 2.6}$ \\ $92.1 \pm 2.9$} & \thead{$\textcolor{gray}{94.6 \pm 1.0}$ \\ $91.8 \pm 1.5$} & \thead{$\textcolor{gray}{93.9 \pm 2.1}$ \\ $91.4 \pm 2.5$} & \thead{$\textcolor{gray}{95.5 \pm 2.9}$ \\ $92.7 \pm 3.2$} \\     
-        \hline
-    \end{tabularx}
-    
-    \caption[Tabla con las métricas para la diástole isovolumétrica (Dias)]{Tabla con las métricas para la diástole isovolumétrica (Dias). L es el largo de la ventana elegida sin solapamiento.  $F_1$ es el promedio armónico, Acc es la exactitud, $P_+$ es lo que se conoce como precision y Se es la sensibilidad.}
-    
+  \centering
+  \begin{tabularx}{\textwidth}{|X|l|l|l|l|l|}
+    \hline
+    Número de señales & L & $F_1$ & $Acc$ & $P_+$ & $Se$ \\
+    \hline
+    \thead{269} & \thead{5 ms} & \thead{$\textcolor{gray}{87.3 \pm 3.2}$ \\ $81.4 \pm 4.0$} & \thead{$\textcolor{gray}{95.6 \pm 2.0}$ \\ $93.5 \pm 3.7$} & \thead{$\textcolor{gray}{87.9 \pm 2.2}$ \\ $81.5 \pm 2.5$} & \thead{$\textcolor{gray}{86.6 \pm 2.1}$ \\ $81.4 \pm 2.8$} \\
+    \hline
+    \thead{590} & \thead{3 ms} & \thead{$\textcolor{gray}{88.6 \pm 3.4}$ \\ $82.4 \pm 3.8$} & \thead{$\textcolor{gray}{96.0 \pm 1.9}$ \\ $93.7 \pm 2.1$} & \thead{$\textcolor{gray}{89.2 \pm 2.2}$ \\ $82.6 \pm 2.9$} & \thead{$\textcolor{gray}{88.0 \pm 1.8}$ \\ $82.2 \pm 2.1$} \\
+    \hline
+    \thead{734} & \thead{2 ms} & \thead{$\textcolor{gray}{88.2 \pm 2.3}$ \\ $83.7 \pm 2.9$} & \thead{$\textcolor{gray}{95.9 \pm 1.7}$ \\ $94.2 \pm 3.1$} & \thead{$\textcolor{gray}{88.1 \pm 3.4}$ \\ $83.0 \pm 4.1$} & \thead{$\textcolor{gray}{88.3 \pm 2.2}$ \\ $84.5 \pm 2.3$} \\
+    \hline
+  \end{tabularx}
+
+  \caption[Tabla con las métricas para el sonido 1 (S1)]{Tabla con las métricas para el sonido 1 (S1). L es el largo de la ventana elegida sin solapamiento. $F_1$ es el promedio armónico, \textit{Acc} es la exactitud, $P_+$ es lo que se conoce como precision y Se es la sensibilidad.}
+
 \end{table}
 
 \begin{table}[H]
-	\centering
-    \begin{tabularx}{\textwidth}{|X|l|l|l|l|l|}
-    	\hline 
-        Número de señales & L & $F_1$ & $Acc$ & $P_+$ & $Se$ \\
-        \hline
-        \thead{269} & \thead{5 ms} & \thead{$\textcolor{gray}{89.8 \pm 3.1}$ \\ $84.9 \pm 4.3$} & \thead{$\textcolor{gray}{95.6 \pm 0.7}$ \\ $93.3 \pm 1.4$} & \thead{$\textcolor{gray}{90.1 \pm 2.7}$ \\ $85.3 \pm 3.8$} & \thead{$\textcolor{gray}{89.6 \pm 3.6}$ \\ $84.5 \pm 5.0$} \\            
-        \hline
-        \thead{590} & \thead{3 ms} & \thead{$\textcolor{gray}{90.8 \pm 2.7}$ \\ $84.0 \pm 4.0$} & \thead{$\textcolor{gray}{96.0 \pm 0.8}$ \\ $92.8 \pm 1.8$} & \thead{$\textcolor{gray}{91.2 \pm 2.1}$ \\ $84.5 \pm 3.0$} & \thead{$\textcolor{gray}{90.5 \pm 3.2}$ \\ $83.5 \pm 4.9$} \\               
-        \hline
-        \thead{734} & \thead{2 ms} & \thead{$\textcolor{gray}{90.3 \pm 2.6}$ \\ $85.9 \pm 3.6$} & \thead{$\textcolor{gray}{95.7 \pm 1.0}$ \\ $93.6 \pm 1.6$} & \thead{$\textcolor{gray}{90.6 \pm 2.1}$ \\ $86.1 \pm 3.2$} & \thead{$\textcolor{gray}{90.0 \pm 3.2}$ \\ $85.7 \pm 4.1$} \\     
-        \hline
-    \end{tabularx}
-    
-    \caption[Tabla con las métricas promediadas del sistema.]{Tabla con las métricas promediadas del sistema. L es el largo de la ventana elegida sin solapamiento.  $F_1$ es el promedio armónico, Acc es la exactitud, $P_+$ es lo que se conoce como precision y Se es la sensibilidad.}
-      
+  \centering
+  \begin{tabularx}{\textwidth}{|X|l|l|l|l|l|}
+    \hline
+    Número de señales & L & $F_1$ & $Acc$ & $P_+$ & $Se$ \\
+    \hline
+    \thead{269} & \thead{5 ms} & \thead{$\textcolor{gray}{89.6 \pm 3.3}$ \\ $81.4 \pm 3.5$} & \thead{$\textcolor{gray}{95.2 \pm 3.1}$ \\ $92.9 \pm 3.4$} & \thead{$\textcolor{gray}{89.7 \pm 2.3}$ \\ $82.1 \pm 2.7$} & \thead{$\textcolor{gray}{89.6 \pm 2.1}$ \\ $80.7 \pm 2.7$} \\
+    \hline
+    \thead{590} & \thead{3 ms} & \thead{$\textcolor{gray}{90.7 \pm 1.4}$ \\ $82.9 \pm 2.2$} & \thead{$\textcolor{gray}{95.7 \pm 2.0}$ \\ $92.1 \pm 2.4$} & \thead{$\textcolor{gray}{91.5 \pm 2.1}$ \\ $83.7 \pm 2.7$} & \thead{$\textcolor{gray}{89.9 \pm 2.9}$ \\ $82.1 \pm 3.1$} \\
+    \hline
+    \thead{734} & \thead{2 ms} & \thead{$\textcolor{gray}{89.5 \pm 2.6}$ \\ $84.0 \pm 2.9$} & \thead{$\textcolor{gray}{95.2 \pm 1.0}$ \\ $92.6 \pm 1.8$} & \thead{$\textcolor{gray}{90.8 \pm 2.1}$ \\ $85.6 \pm 2.5$} & \thead{$\textcolor{gray}{88.3 \pm 3.2}$ \\ $82.5 \pm 3.5$} \\
+    \hline
+  \end{tabularx}
+
+  \caption[Tabla con las métricas para el sístole isovolumétrico (Sys)]{Tabla con las métricas para el sístole isovolumétrico (Sys). L es el largo de la ventana elegida sin solapamiento. $F_1$ es el promedio armónico, Acc es la exactitud, $P_+$ es lo que se conoce como precision y Se es la sensibilidad.}
+
+\end{table}
+
+\begin{table}[H]
+  \centering
+  \begin{tabularx}{\textwidth}{|X|l|l|l|l|l|}
+    \hline
+    Número de señales & L & $F_1$ & $Acc$ & $P_+$ & $Se$ \\
+    \hline
+    \thead{269} & \thead{5 ms} & \thead{$\textcolor{gray}{87.4 \pm 3.6}$ \\ $81.4 \pm 3.9$} & \thead{$\textcolor{gray}{96.8 \pm 3.1}$ \\ $95.4 \pm 3.5$} & \thead{$\textcolor{gray}{88.1 \pm 2.7}$ \\ $82.1 \pm 3.0$} & \thead{$\textcolor{gray}{86.7 \pm 2.2}$ \\ $80.7 \pm 2.5$} \\
+    \hline
+    \thead{590} & \thead{3 ms} & \thead{$\textcolor{gray}{88.8 \pm 1.9}$ \\ $80.1 \pm 2.3$} & \thead{$\textcolor{gray}{97.2 \pm 2.0}$ \\ $95.0 \pm 2.7$} & \thead{$\textcolor{gray}{89.5 \pm 2.9}$ \\ $82.1 \pm 3.1$} & \thead{$\textcolor{gray}{88.2 \pm 3.1}$ \\ $78.2 \pm 3.4$} \\
+
+    \hline
+    \thead{734} & \thead{2 ms} &
+    \thead{$\textcolor{gray}{88.8 \pm 1.9}$ \\ $83.8 \pm 2.1$} & \thead{$\textcolor{gray}{97.2 \pm 2.1}$ \\ $95.9 \pm 2.2$} & \thead{$\textcolor{gray}{89.7 \pm 2.5}$ \\ $84.5 \pm 3.1$} & \thead{$\textcolor{gray}{87.9 \pm 2.8}$ \\ $83.2 \pm 3.0$} \\
+    \hline
+  \end{tabularx}
+
+  \caption[Tabla con las métricas para el sonido 2 (S2)]{Tabla con las métricas para el sonido 2 (S2). L es el largo de la ventana elegida sin solapamiento.  $F_1$ es el promedio armónico, Acc es la exactitud, $P_+$ es lo que se conoce como precision y Se es la sensibilidad.}
+
+\end{table}
+
+\begin{table}[H]
+  \centering
+  \begin{tabularx}{\textwidth}{|X|l|l|l|l|l|}
+    \hline
+    Número de señales & L & $F_1$ & $Acc$ & $P_+$ & $Se$ \\
+    \hline
+    \thead{269} & \thead{5 ms} & \thead{$\textcolor{gray}{95.0 \pm 1.7}$ \\ $91.9 \pm 2.1$} & \thead{$\textcolor{gray}{94.9 \pm 2.1}$ \\ $91.6 \pm 2.5$} & \thead{$\textcolor{gray}{94.6 \pm 1.9}$ \\ $90.9 \pm 2.1$} & \thead{$\textcolor{gray}{95.5 \pm 1.5}$ \\ $93.0 \pm 2.1$} \\
+    \hline
+    \thead{590} & \thead{3 ms} & \thead{$\textcolor{gray}{95.2 \pm 1.3}$ \\ $90.7 \pm 1.9$} & \thead{$\textcolor{gray}{95.1 \pm 2.0}$ \\ $90.2 \pm 2.1$} & \thead{$\textcolor{gray}{94.5 \pm 2.1}$ \\ $89.7 \pm 2.3$} & \thead{$\textcolor{gray}{96.0 \pm 1.5}$ \\ $91.6 \pm 2.0$} \\
+    \hline
+    \thead{734} & \thead{2 ms} & \thead{$\textcolor{gray}{94.7 \pm 2.6}$ \\ $92.1 \pm 2.9$} & \thead{$\textcolor{gray}{94.6 \pm 1.0}$ \\ $91.8 \pm 1.5$} & \thead{$\textcolor{gray}{93.9 \pm 2.1}$ \\ $91.4 \pm 2.5$} & \thead{$\textcolor{gray}{95.5 \pm 2.9}$ \\ $92.7 \pm 3.2$} \\
+    \hline
+  \end{tabularx}
+
+  \caption[Tabla con las métricas para la diástole isovolumétrica (Dias)]{Tabla con las métricas para la diástole isovolumétrica (Dias). L es el largo de la ventana elegida sin solapamiento.  $F_1$ es el promedio armónico, Acc es la exactitud, $P_+$ es lo que se conoce como precision y Se es la sensibilidad.}
+
+\end{table}
+
+\begin{table}[H]
+  \centering
+  \begin{tabularx}{\textwidth}{|X|l|l|l|l|l|}
+    \hline
+    Número de señales & L & $F_1$ & $Acc$ & $P_+$ & $Se$ \\
+    \hline
+    \thead{269} & \thead{5 ms} & \thead{$\textcolor{gray}{89.8 \pm 3.1}$ \\ $84.9 \pm 4.3$} & \thead{$\textcolor{gray}{95.6 \pm 0.7}$ \\ $93.3 \pm 1.4$} & \thead{$\textcolor{gray}{90.1 \pm 2.7}$ \\ $85.3 \pm 3.8$} & \thead{$\textcolor{gray}{89.6 \pm 3.6}$ \\ $84.5 \pm 5.0$} \\
+    \hline
+    \thead{590} & \thead{3 ms} & \thead{$\textcolor{gray}{90.8 \pm 2.7}$ \\ $84.0 \pm 4.0$} & \thead{$\textcolor{gray}{96.0 \pm 0.8}$ \\ $92.8 \pm 1.8$} & \thead{$\textcolor{gray}{91.2 \pm 2.1}$ \\ $84.5 \pm 3.0$} & \thead{$\textcolor{gray}{90.5 \pm 3.2}$ \\ $83.5 \pm 4.9$} \\
+    \hline
+    \thead{734} & \thead{2 ms} & \thead{$\textcolor{gray}{90.3 \pm 2.6}$ \\ $85.9 \pm 3.6$} & \thead{$\textcolor{gray}{95.7 \pm 1.0}$ \\ $93.6 \pm 1.6$} & \thead{$\textcolor{gray}{90.6 \pm 2.1}$ \\ $86.1 \pm 3.2$} & \thead{$\textcolor{gray}{90.0 \pm 3.2}$ \\ $85.7 \pm 4.1$} \\
+    \hline
+  \end{tabularx}
+
+  \caption[Tabla con las métricas promediadas del sistema.]{Tabla con las métricas promediadas del sistema. L es el largo de la ventana elegida sin solapamiento.  $F_1$ es el promedio armónico, Acc es la exactitud, $P_+$ es lo que se conoce como precision y Se es la sensibilidad.}
+
 \end{table}
 
 \indent Los resultados muestran que para cada uno de los sonidos las mejores métricas se alcanzan para las señales divididas en cuadros de 3 ms. Sin embargo, dada al desvío que presentan todas ellas, no se puede afirmar definitivamente que aumentando la cantidad de señales y al mismo tiempo reduciendo la longitud de los cuadros se mejore la segmentación. \\
@@ -107,45 +107,45 @@
 \indent Los algoritmos comparados para mostrar en dónde se encuentra el presente trabajo se ilustran en el Cuadro \ref{tab:performance-comparison}. Estos algoritmo se han probado con el mismo set de datos y diferentes técnicas de procesamiento.
 
 \begin{table}[H]
-	\centering
-    \begin{tabularx}{\textwidth}{|X|l|l|l|l|}
-    	\hline 
-        \backslashbox[61mm]{Algoritmos}{Métricas} & $F_1$ & $Acc$ & $P_+$ & $Se$ \\
-        
-        \hline
-        \thead{Schmidt \cite{pp:schmidt2010}}        &
-        \thead{$93.0 \pm 3.2$} &
-        \thead{$87.4 \pm 2.6$} &
-        \thead{$93.3 \pm 2.8$} &
-        \thead{$92.7 \pm 3.8$} \\ 
-        
-        \hline
-        \thead{Springer \cite{pp:springer2015}}       &
-        \thead{$94.5 \pm 1.8$} &
-        \thead{$89.8 \pm 1.2$} &
-        \thead{$94.8 \pm 1.8$} &
-        \thead{$94.3 \pm 1.8$} \\   
-        
-        \hline
-        \thead{\acrshort{cnn}+max \cite{pp:renna2018}}        &
-         \thead{$\mathbf{95.7 \pm 1.3}$} &
-        \thead{$\mathbf{93.7} \pm \mathbf{1.0}$} &
-        \thead{$\mathbf{95.7} \pm \mathbf{1.4}$} &
-        \thead{$\mathbf{95.7} \pm \mathbf{1.2}$} \\ 
-        
-        \hline
-        \thead{\acrshort{lstm}}           &
-        \thead{$84.9 \pm 4.3$} &
-        \thead{$93.3 \pm 1.4$} &
-        \thead{$85.3 \pm 3.8$} &
-        \thead{$84.5 \pm 5.0$} \\ 
-        
-        \hline
-    \end{tabularx}
-    
-    \caption[Tabla comparativa de las métricas entre diferentes arquitecturas y técnicas]{Tabla comparativa de las métricas entre diferentes arquitecturas y técnicas. Las señales son \textit{frames} de 5 ms. La arquitectura de Renna \textit{et. al} logra la mayor performance en términos de segmentación.}
-    \label{tab:performance-comparison}
-      
+  \centering
+  \begin{tabularx}{\textwidth}{|X|l|l|l|l|}
+    \hline
+    \backslashbox[61mm]{Algoritmos}{Métricas} & $F_1$ & $Acc$ & $P_+$ & $Se$ \\
+
+    \hline
+    \thead{Schmidt \cite{pp:schmidt2010}}        &
+    \thead{$93.0 \pm 3.2$} &
+    \thead{$87.4 \pm 2.6$} &
+    \thead{$93.3 \pm 2.8$} &
+    \thead{$92.7 \pm 3.8$} \\
+
+    \hline
+    \thead{Springer \cite{pp:springer2015}}       &
+    \thead{$94.5 \pm 1.8$} &
+    \thead{$89.8 \pm 1.2$} &
+    \thead{$94.8 \pm 1.8$} &
+    \thead{$94.3 \pm 1.8$} \\
+
+    \hline
+    \thead{\acrshort{cnn}+max \cite{pp:renna2018}}        &
+    \thead{$\mathbf{95.7 \pm 1.3}$} &
+    \thead{$\mathbf{93.7} \pm \mathbf{1.0}$} &
+    \thead{$\mathbf{95.7} \pm \mathbf{1.4}$} &
+    \thead{$\mathbf{95.7} \pm \mathbf{1.2}$} \\
+
+    \hline
+    \thead{\acrshort{lstm}}           &
+    \thead{$84.9 \pm 4.3$} &
+    \thead{$93.3 \pm 1.4$} &
+    \thead{$85.3 \pm 3.8$} &
+    \thead{$84.5 \pm 5.0$} \\
+
+    \hline
+  \end{tabularx}
+
+  \caption[Tabla comparativa de las métricas entre diferentes arquitecturas y técnicas]{Tabla comparativa de las métricas entre diferentes arquitecturas y técnicas. Las señales son \textit{frames} de 5 ms. La arquitectura de Renna \textit{et. al} logra la mayor performance en términos de segmentación.}
+  \label{tab:performance-comparison}
+
 \end{table}
 
 
@@ -155,21 +155,21 @@
 
 \subsection*{Post-procesamiento}
 
-\indent En el caso del post-procesamiento pueden aplicar varias técnicas. Éstas tienen relación con dar una restricción de transición de estados. Es decir, que sólo luego de un sonido S$_1$ proceda una sístole silenciosa, y así con el resto de los estados. 
+\indent En el caso del post-procesamiento pueden aplicar varias técnicas. Éstas tienen relación con dar una restricción de transición de estados. Es decir, que sólo luego de un sonido S$_1$ proceda una sístole silenciosa, y así con el resto de los estados.
 
 \subsubsection*{Modelo temporal secuencial máximo}
 
 \indent Para restringir la transición de los estados se consigue aplicando la ecuación \ref{eq:max-temporal-modeling}.
 
 \begin{align} \label{eq:max-temporal-modeling}
-    \hat{s}(t) =
-    \begin{cases}
-        \Tilde{s}(t), \quad &\Tilde{s}(t) = \mathrm{mod}(\hat{s}(t-1)+1, 4)\\
-        \hat{s}(t-1), \quad &\mathrm{en\;otro\;caso}
-    \end{cases}
+\hat{s}(t) =
+\begin{cases}
+  \Tilde{s}(t), \quad &\Tilde{s}(t) = \mathrm{mod}(\hat{s}(t-1)+1, 4)\\
+  \hat{s}(t-1), \quad &\mathrm{en\;otro\;caso}
+\end{cases}
 \end{align}
 
-\indent Esta ecuación necesita una semilla donde $\hat{s}(0) = \Tilde{s}(0)$. La principal ventaja de este método es la baja complejidad algorítmica y la posibilidad de aplicarlo en una segmentación en tiempo real. 
+\indent Esta ecuación necesita una semilla donde $\hat{s}(0) = \Tilde{s}(0)$. La principal ventaja de este método es la baja complejidad algorítmica y la posibilidad de aplicarlo en una segmentación en tiempo real.
 
 \subsubsection*{Modelado basado en Cadenas Ocultas de Markov (\acrshort{hmm})}
 
@@ -177,27 +177,27 @@
 \indent Por otro lado, las emisiones pueden ser calculadas a partir de la matriz $\mathbf{B}$. Asumiendo que representan una buena aproximación de la probabilidad a posteriori en el tiempo $t$ dada la observación del vector de emisión $\mathbf{x}(t)$.
 
 \begin{align}
-    p(s(t) = j | \mathbf{x}(t)) \sim B_{t,j}
+  p(s(t) = j | \mathbf{x}(t)) \sim B_{t,j}
 \end{align}
 
 \indent Y a través del Teorema de Bayes, es posible computar dichas probabilidades.
 
 \begin{align}
-    e_{t,j} = p(\mathbf{x}(t)|s(t)=j) = \frac{p(s(t) = j|\mathbf{x}(t)) \cdot p(\mathbf{x}(t))}{p(s(t) = j)}
+  e_{t,j} = p(\mathbf{x}(t)|s(t)=j) = \frac{p(s(t) = j|\mathbf{x}(t)) \cdot p(\mathbf{x}(t))}{p(s(t) = j)}
 \end{align}
 
 \indent En este caso la distribución $p(\mathbf{x}(t))$ es aproximada por una gaussiana multivariable cuya media y matriz de covarianza son estimados a partir de los datos de entrenamiento usando ML. \\
 \indent Luego, el modelo \acrshort{hmm} se encarga de determinar la sequencia de estados asociada que maximimiza la función de verosimilitud mediante el algoritmo de Viterbi.
 
 \begin{align}
-    \mathcal{L}(s,\mathbf{x}) = p(s(0),\dots,s(n-1),\mathbf{x}(0),\dots,\mathbf{x}(n-1))
+  \mathcal{L}(s,\mathbf{x}) = p(s(0),\dots,s(n-1),\mathbf{x}(0),\dots,\mathbf{x}(n-1))
 \end{align}
 
 \indent De esta manera la sequencia $\hat{s}(t)$ se consigue a partir de la secuencia que maximiza la función de verosimilitud.
 
 \subsubsection*{Modelado basado en Cadenas Ocultas de Markov dependientes del tiempo (\acrshort{dhmm})}
 
-\indent Las probabilidades de emisiones del método anterior, también son utilizadas en este. Además, se introduce la dependencia del tiempo en donde se modela al tiempo en un estado como una distribución gaussiana donde su media y varianza es estimada a partir de un análisis de autocorrelación explicado en \cite{pp:schmidt2010}. Una vez más a partir del algoritmo de Viterbi se decodifica la secuencia $\hat{s}(t)$. 
+\indent Las probabilidades de emisiones del método anterior, también son utilizadas en este. Además, se introduce la dependencia del tiempo en donde se modela al tiempo en un estado como una distribución gaussiana donde su media y varianza es estimada a partir de un análisis de autocorrelación explicado en \cite{pp:schmidt2010}. Una vez más a partir del algoritmo de Viterbi se decodifica la secuencia $\hat{s}(t)$.
 
 \subsubsection*{Modelado adaptativo basado en Cadenas Ocultas de Markov dependientes del tiempo}
 
