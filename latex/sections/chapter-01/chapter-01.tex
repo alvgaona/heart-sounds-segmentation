@@ -1,0 +1,63 @@
+\chapter{Presentación}
+
+\section{Motivación}
+
+\indent El presente trabajo se hace en el marco de una tesis de grado de la \textit{Facultad de Ingeniería de la Universidad de Buenos Aires} (FIUBA) en conjunto con los investigadores Dr. Pedro David Arini y la Dra. María Paula Bonomini. \bigskip
+
+\indent Pedro y Paula se encuentran actualmente en el \textit{Instituto Argentino de Matemática} (\acrshort{iam}) del \textit{Consejo Nacional de Investigaciones Científicas y Técnicas} (\acrshort{conicet}) y en el \textit{Instituto de Investigaciones Biomédicas ``Alberto Sols``} (\acrshort{iibm}). Pedro se especializa en el campo de \textit{``Procesamiento digital de señales aplicado al cálculo y modelado estadístico de la actividad eléctrica cardíaca``} y Paula en el campo de \textit{``Modelos matemáticos y tratamiento digital de la señal electrocardiográfica para paredicción de riesgo cardíaco``}. \bigskip
+
+\indent Por otro lado, el análisis de fonocardiogramas no es común en
+ambientes clínicos como hospitales. Dicho esto conseguir datos asociados de pacientes no es tarea sencilla. Por ende, el \acrshort{iam} se encuentra trabajando en el diseño e implementación de un equipo capaz de realizar la adquisición de estas señales con bajo error para realizar una base de datos propia dedicada a la investigación.
+
+\indent Más aún, las técnicas de análisis automático de fonocardiogramas no han sido desarrolladas como el análisis de electrocardiogramas. Así, el \acrshort{iam} tiene pendiente como tema de investigación la segmentación de fonocardiogramas para luego que sea ésta una base en la detección automática de enfermedades cardiovasculares. \bigskip
+
+\indent Finalmente, este tema va a seguir llevado a cabo en áreas de estudio superiores con el objetivo de mejorar y aportar a la comunidad científica una propuesta nueva e innovadora.
+
+\newpage
+
+\section{Objetivos}
+
+	La propuesta de investigación tiene como enfoque proponer una alternativa de segmentación diferente al estado del arte. Bajo esta disposición, se definen objetivos generales al tema de investigación y objetivos específicos del trabajo presentado en este documento. \bigskip
+	
+	El desempeño de la segmentación es fundamental en todo trabajo relacionado a la detección o estimación. De esta manera este trabajo ha sido llevado a cabo con ese objetivo. Por otro lado, se ha visto en la implementación de David Springer \textit{et al.} \cite{pp:springer2015} que el algoritmo de etiquetamiento comete errores, lo cual requiere un ajuste ad hoc de los parámetros. Ésto dispara la necesidad de un nuevo algoritmo y/o la extracción de marcas de otras señales complementarias. \\
+    \indent De la mano del desempeño y del error de segmentación se encuentra la necesidad de ampliar la base de datos de entrenamiento.
+
+\subsection*{Generales}
+
+\begin{itemize}
+    \item Mejorar el desempeño de la segmentación respecto al estado del arte.
+    \item Proponer un algoritmo de etiquetamiento automático a partir de marcas del \acrshort{ecg}.
+    \item Proponer nuevas marcas asociadas a otras señales complementarias al \acrshort{pcg} (\textit{phonocardiogram}).
+    \item Ampliar la base de datos utilizada para la segmentación.
+    \item Realizar una implementación en tiempo real del segmentador propuesto.
+    \item Proponer un clasificador para la detección de señales patológicas.
+    \item Plantear nuevas lineas de trabajo que permitan continuar con el trabajo de investigación.
+\end{itemize}
+
+\subsection*{Específicos}
+
+    \begin{itemize}
+        \item Extraer marcas de \acrshort{ecg} asociados a un \acrshort{pcg}.
+        \item Acondicionar las señales de \acrshort{pcg}.
+        \item Implementar algoritmo de extracción de cuadros (\textit{frames}) de las señales de \acrshort{pcg}.
+        \item Implementar red neuronal \acrshort{lstm} como clasificador.
+        \item Implementar entrenamiento del model de segmentación bajo el concepto de \textit{Cross-validation}.
+        \item Comparar métricas de desempeño entre los distintos métodos del estado del arte.
+        \item Proponer mejoras a futuro.
+    \end{itemize}
+
+\newpage 
+
+\section{Lineamientos generales de la tesis}
+
+\begin{itemize}
+	\item \textbf{Capítulo 1}: Se hace una presentación del trabajo. Explica el contexto, motivación y objetivos.
+	\item \textbf{Capítulo 2}: Se da un marco teórico de la naturaleza de la señal y de la fisiología asociada al tema, dando un contexto de la biología humana involucrada.
+    \item \textbf{Capítulo 3}: Se hace mención a las distintas bases de datos con fonocardiogramas, la comparativa entre ella y el por qué de la elección de una de ellas.
+    \item \textbf{Capítulo 4}: Se explica la etapa de pre-procesamiento necesaria para el acondicionamiento de las señales (filtros, etiquetas, ente otras cuestiones).
+    \item \textbf{Capítulo 5}: Se explica la etapa de procesamiento del trabajo, abordando principalmente la teoría de la extracción de atributos de los fonocardiogramas.
+     \item \textbf{Capítulo 6}: Se aborda el tema de \textit{deep learning} definiendo el marco teórico de los modelos y técnicas aplicados en este trabajo. 
+     \item \textbf{Capítulo 7}: Se muestra la implementación de la solución al problema en cuestión, mostrando algoritmos implementados, arquitectura del modelo.
+     \item \textbf{Capítulo 8}: Se intenta ilustrar los resultados del trabajo y proponiendo algunos temas de discusión a partir de estos resultados obtenidos.
+     \item \textbf{Capítulo 9}: Se toman conclusiones del trabajo, proponiendo mejoras a fin de igualar o superar el rendimiento de otros algoritmos del actual estado del arte.
+\end{itemize}

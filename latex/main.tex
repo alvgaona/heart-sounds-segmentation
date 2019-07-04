@@ -1,0 +1,139 @@
+\title{Tesis de grado}
+\author{Álvaro Joaquín Gaona}
+
+\documentclass[a4paper,12pt]{report}
+\usepackage[a4paper,width=150mm,headheight=110pt,top=25mm,bottom=25mm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{times}
+\usepackage{afterpage}
+\usepackage{mathtools}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[hang,bf]{caption}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage{amsmath,stackrel}
+\usepackage{textcomp}
+\usepackage{gensymb}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{ragged2e}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{tabularx}
+\decimalpoint
+\usepackage{xcolor}
+\usepackage{tabulary}
+\usepackage{makecell}
+\usepackage[colorlinks=true,linkcolor=black,citecolor=black,filecolor=black,urlcolor=black,]{hyperref}
+\usepackage{url}
+\usepackage{verbatim} 
+\usepackage{mathrsfs}
+\usepackage{mathtools}
+\usepackage{dsfont}
+\usepackage{fancyhdr}
+\usepackage{slashbox}
+\usepackage[toc,acronym]{glossaries}
+\usepackage{bm}
+
+\renewcommand\theadalign{tl}
+\renewcommand\theadfont{\footnotesize}
+
+\selectlanguage{spanish}
+
+\makeatletter
+\renewcommand{\ALG@name}{Algoritmo}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[R]{\textit{\leftmark}}
+\fancyhead[L]{A. J. Gaona}
+\fancyfoot[C]{\thepage}
+
+\makeglossaries
+\newacronym{fiuba}{FIUBA}{Facultad de Ingeniería de la Universidad de Buenos Aires}
+\newacronym{iam}{IAM}{Instituto Argentino de Matemática}
+\newacronym{iibm}{IIBM}{Instituto de Investigaciones Biomédicas}
+\newacronym{conicet}{CONICET}{Consejo Nacional de Investigaciones Científicas y Técnicas}
+\newacronym{nigms}{NIGMS}{National Institute of General Medical Sciences}
+\newacronym{nibib}{NIBIB}{National Institute of Biomedical Imaging and Bioengineering}
+\newacronym{iclr}{ICLR}{International Conference on Learning Representations}
+\newacronym{mit}{MIT}{Massachusetts Institute of Technology}
+\newacronym{edf}{EDF}{European Data Format}
+\newacronym{http}{HTTP}{Hypertext Transfer Protocol}
+\newacronym{ftp}{FTP}{File Transfer Protocol}
+\newacronym{wfdb}{WFDB}{Waveform Database}
+\newacronym{ecg}{ECG}{Electrocadiograma}
+\newacronym{pcg}{PCG}{Phonocardiogram}
+\newacronym{maa}{MAA}{Maximum Absolute Amplitude}
+\newacronym{sqi}{SQI}{Signal Quality Index}
+\newacronym{am}{AM}{Amplitude Modulation}
+\newacronym{fm}{FM}{Frequency Modulation}
+\newacronym{tf}{TF}{Time-frequency}
+\newacronym{ts}{TS}{Time-scale}
+\newacronym{tpr}{TPR}{True Positive Rate}
+\newacronym{tnr}{TNR}{True Negative Rate}
+\newacronym{ppv}{PPV}{Positive Predictive Value}
+\newacronym{fdr}{FDR}{False Discovery Rate}
+\newacronym{for}{FOR}{False Omission Rate}
+\newacronym{fpr}{FPR}{False Positive Rate}
+\newacronym{npv}{NPV}{Negative Predictive Value}
+\newacronym{tpv}{TPV}{True Positive Value}
+\newacronym{fnr}{FNR}{False Negative Rate}
+\newacronym{acc}{ACC}{Accuracy}
+\newacronym{tp}{TP}{True Positive}
+\newacronym{tn}{TN}{True Negative}
+\newacronym{fn}{FN}{False Negative}
+\newacronym{fp}{FP}{False Positive}
+\newacronym{mse}{MSE}{Mean Square Error}
+\newacronym{mae}{MAE}{Mean Absolute Error}
+\newacronym{mbe}{MBE}{Mean Bias Error}
+\newacronym{rgb}{RGB}{Red Green Blue}
+\newacronym{mlp}{MLP}{Multilayer Perceptron}
+\newacronym{relu}{ReLU}{Rectified Linear Unit}
+\newacronym{dhmm}{DHMM}{Duration-dependent Hidden Markov Model}
+\newacronym{hmm}{HMM}{Hidden Markov Model}
+\newacronym{sst}{SST}{Synchrosqueezed Transform}
+\newacronym{fsst}{FSST}{Fast Synchrosqueezed Transform}
+\newacronym{stft}{STFT}{Short-time Fourier Transform}
+\newacronym{dwt}{DWT}{Discrete Wavelet Transform}
+\newacronym{cwt}{CWT}{Continous Wavelet Transform}
+\newacronym{dnn}{DNN}{Deep Neural Network}
+\newacronym{cnn}{CNN}{Convolutional Neural Network}
+\newacronym{rnn}{RNN}{Recurrent Neural Network}
+\newacronym{lstm}{LSTM}{Long Short-Term Memory}
+\newacronym{sgd}{SGD}{Stochastic Gradient Descent}
+
+
+\usepackage{lmodern}
+
+\begin{document}
+
+% Set pages
+\setcounter{page}{1}
+\setcounter{section}{0}
+
+\input{sections/cover.tex}
+\input{sections/summary.tex}
+\afterpage{\null\newpage}
+\tableofcontents
+\printglossary[type=\acronymtype,title=Acrónimos,toctitle=Acrónimos]
+\afterpage{\null\newpage}
+\input{sections/chapter-01/chapter-01.tex}
+\input{sections/chapter-02/chapter-02.tex}
+\input{sections/chapter-03/chapter-03.tex}
+\input{sections/chapter-04/chapter-04.tex}
+\input{sections/chapter-05/chapter-05.tex}
+\input{sections/chapter-06/chapter-06.tex}
+\input{sections/chapter-07/chapter-07.tex}
+\input{sections/chapter-08/chapter-08.tex}
+\input{sections/chapter-09/chapter-09.tex}
+\afterpage{\null\newpage}
+\listoffigures
+\listoftables
+\afterpage{\null\newpage}
+\input{bibliography.tex}
+
+\end{document}
