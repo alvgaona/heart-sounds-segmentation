@@ -6,15 +6,4 @@ images/
 
 ## LaTeX
 out/
-latex/*.acn
-latex/*.aux
-latex/*.bbl
-latex/*.blg
-latex/*.glo
-latex/*.ist
-latex/*.lof
-latex/*.log
-latex/*.lot
-latex/*.out
-latex/*.synctex.gz
-latex/*.toc
+latex/aux/
