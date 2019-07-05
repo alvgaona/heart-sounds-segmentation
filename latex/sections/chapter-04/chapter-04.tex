@@ -5,7 +5,7 @@
 Las señales biológicas, como tantas otras, presentan contaminación en el momento de la adquisición. Éstas fuentes de
 ruido, ya las mencionamos antes, provienen de ruidos respiratorios, intestinales, habla, entre otras. Por varios
 motivos es recomendable realizar un pre-procesamiento de ellas para que los algoritmos que buscan características
-específicas de la señal en cuestión no "se confunda". Por ejemplo, los algoritmos de delineado de \acrshort{ecg},
+específicas de la señal en cuestión no "se confunda". Por ejemplo, los algoritmos de delineado de \gls{ecg},
 donde ubican las ondas fundamentales (P, Q, R, S, T$_{on}$, T, T$_{off}$) mejor se desempeñan cuanto más limpia o
 clara es la señal. \\
 \indent Un fonocardiograma presenta frecuencias entre $25-250$ Hz. Esto se debe a los sonidos fundamentales de la
@@ -94,7 +94,7 @@ procesamiento. \bigskip
 \indent Dada una señal de fonocardiograma $\bm{x}_i \in \mathbb{R}^N$ muestreada a una frecuencia de muestreo $F_s$,
 se elige una ventana de largo arbitrario, i.e. $L = \left[\frac{F_s}{2}\right]$. \bigskip
 
-\indent La idea fundamental es dividir el \acrshort{pcg} en ventanas de longitud $L$. Debido a esto si el módulo
+\indent La idea fundamental es dividir el \gls{pcg} en ventanas de longitud $L$. Debido a esto si el módulo
 entre la longitud de la señal y el largo de la ventana definido no es cero, algunas muestras quedarán fuera de
 alguna de las ventanas. Estas muestras se denominan muestras residuales que no participan en el algoritmo y deben
 ser agregadas al final para recuperar la señal. El número de muestras residuales se definen en la siguiente ecuación.
@@ -105,7 +105,7 @@ ser agregadas al final para recuperar la señal. El número de muestras residual
 
 \indent Definimos la ventana $\bm{w}_i \in \mathbb{R}^L$, con $i = 0,1,\dots,\left\lfloor \frac{N}{L} \right\rfloor$
 . Luego, definimos al vector de los máximos, $\bm{m} \in \mathbb{R}^{\left\lfloor \frac{N}{L} \right\rfloor}$. Este
-vector contiene los valores máximos de las ventanas, denominados \textit{Maximum Absolute Amplitude} (\acrshort{maa}).
+vector contiene los valores máximos de las ventanas, denominados \textit{Maximum Absolute Amplitude} (\gls{maa}).
 
 \begin{align}
   m_i = \mathrm{max} \; \bm{w}_i
@@ -172,7 +172,7 @@ agregan al final las muestras residuales. \bigskip
 que presenta ciertas oscilaciones, luego de ser filtrado por los filtros lineales anteriores. \\
 \indent Mediante un algoritmo suavizador, se aplica un ventaneo de media móvil, donde se desliza la ventana a lo
 largo de toda la señal calculando el promedio de cada una de las muestras. Además, se encuentra aplicado el
-algoritmo de remoción de picos de los \acrshort{pcg}.
+algoritmo de remoción de picos de los \gls{pcg}.
 
 \begin{figure}[H]
   \centering
@@ -189,9 +189,9 @@ fin de la onda T. Esto fue propuesto por Schmidt \textit{et al.} en \cite{pp:sch
 sonidos fundamentales del fonocardiograma, S$_1$ y S$_2$ tienen una media y un desvío asociado. Simplemente midió la
 duración de S$_1$ y S$_2$ para luego calcular la media y el desvío muestral, concluyendo que la duración se mantiene
 relativamente constante siendo de ($122 \pm 32$) ms y ($92 \pm 28$) ms con un $95\%$ de intervalo de confianza. \\
-\indent Para la extracción de marcas del \acrshort{ecg}, éstas fueron hechas automáticamente por algoritmos de
+\indent Para la extracción de marcas del \gls{ecg}, éstas fueron hechas automáticamente por algoritmos de
 delineación. Para ello se compararon 4 detectores para la detección de la onda R y el fin de la onda T. El hecho de
-que haya ruido y artefactos en el \acrshort{ecg} provocará que las anotaciones de los detectores no coincidan. Para
+que haya ruido y artefactos en el \gls{ecg} provocará que las anotaciones de los detectores no coincidan. Para
 ello, para asegurar que las anotaciones sean de calidad, se derivó un \textit{Signal Quality Index} (SQI) mediante
 la concordancia entre los detectores. \\
 \indent Los detectores utilizados para la detección de la onda R fueron gQRS, jQRS (anteriormente utilizados en
@@ -205,8 +205,8 @@ consistentes entre si las anotaciones no deben estar más alejadas que 100 ms.
 \begin{figure}[H]
   \centering
   \includegraphics[scale=0.8]{sections/chapter-04/images/detector-agreement.png}
-  \caption[Ejemplo de las anotaciones de una señal de \acrshort{ecg} con ruido. La posición de las anotaciones
-  para cada uno de los detectores se muestran]{Ejemplo de las anotaciones de una señal de \acrshort{ecg} con ruido
+  \caption[Ejemplo de las anotaciones de una señal de \gls{ecg} con ruido. La posición de las anotaciones
+  para cada uno de los detectores se muestran]{Ejemplo de las anotaciones de una señal de \gls{ecg} con ruido
   . La posición de las anotaciones para cada uno de los detectores se muestran. Imagen extraída de
   \cite{pp:springer2015}.}
   \label{fig:detector-agreement}
@@ -224,7 +224,7 @@ de duración de los sonidos. Sin embargo, para el conjunto de datos de este trab
 bien definidos. Para ello, se modificaron las medias a ($122 \pm 22$) ms y ($152 \pm 22$) ms. Es necesario mencionar
 que el algoritmo propuesto por Springer \textit{et. al} sea, tal vez, el responsable de la necesidad de adaptar los
 parámetros de manera ad hoc. \\
-\indent En la Figura \ref{fig:pcg-labeling} se observa una porción de una señal de \acrshort{pcg} donde, en base a
+\indent En la Figura \ref{fig:pcg-labeling} se observa una porción de una señal de \gls{pcg} donde, en base a
 las marcas proveídas por la base de datos, se realiza el etiquetado de los estados de la señal [sístole (S$_1$),
 sístole isovolumético, diástole (S$_2$), diástole isovolumétrico].
 
