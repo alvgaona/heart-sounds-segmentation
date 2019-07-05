@@ -83,16 +83,28 @@ señales se encuentran a una frecuencia de muestreo mayor. Para ello, se tomó c
 
 \subsection*{MIT Format}
 \begin{itemize}
-  \item Los archivos \textit{MIT Signal} (\texttt{.dat}) son archivos binarios que contienen muestras de señales digitalizadas. Éstas almacenan las señales, pero no pueden ser interpretados sin los \textit{header} files. Los archivos son de la forma: \texttt{\{RECORD\_NAME\}.dat}.
-  \item Los archivos \textit{MIT Header} (\texttt{.hea}) son archivos de texto cortos que describen el contenido del archivo de la señal asociado.
-  \item Los archivos \textit{MIT Annotation} son archivos binarios que contienen anotaciones (etiquetas que generalmente refieren a muestras específicas de una señal asociada). Éstos deben ser leídos junto a los archivos header asociado. En caso de que en un directorio se vean archivos \texttt{\{RECORD\_NAME\}.dat}, y/o \texttt{\{RECORD\_NAME\}.hea}, cualquier otro archivo con otra extensión es un archivo de anotaciones. Por ejemplo, \texttt{\{RECORD\_NAME\}.atr} es un archivo con anotaciones para esa señal.
+  \item Los archivos \textit{MIT Signal} (\texttt{.dat}) son archivos binarios que contienen muestras de señales
+  digitalizadas. Éstas almacenan las señales, pero no pueden ser interpretados sin los \textit{header} files.
+  Los archivos son de la forma: \texttt{\{RECORD\_NAME\}.dat}.
+  \item Los archivos \textit{MIT Header} (\texttt{.hea}) son archivos de texto cortos que describen el contenido
+  del archivo de la señal asociado.
+  \item Los archivos \textit{MIT Annotation} son archivos binarios que contienen anotaciones (etiquetas que
+  generalmente refieren a muestras específicas de una señal asociada). Éstos deben ser leídos junto a los archivos
+  \texit{header} asociado. En caso de que en un directorio se vean archivos \texttt{\{RECORD\_NAME\}.dat}, y/o
+  \texttt{\{RECORD\_NAME\}.hea}, cualquier otro archivo con otra extensión es un archivo de anotaciones. Por ejemplo,
+  \item \texttt{\{RECORD\_NAME\}.atr} es un archivo con anotaciones para esa señal.
 \end{itemize}
 
 \subsection*{EDF Format}
 \begin{itemize}
-  \item Los archivos \href{http://www.edfplus.info/specs/edf.html}{\underline{EDF}} contienen señales digitalizadas almacenadads en formato internacional. Estos archivos guardan la información de encabezado al comienzo del archivo, a diferencia del formato MIT. A su vez pueden estar acompañados de archivos con anotaciones. Por ejemplo, si existe un archivo \texttt{*.edf}, un archivo con anotaciones asociado podría ser \texttt{*.edf.qrs}, donde \texttt{.qrs} es la extensión de las anotaciones en este caso (podría ser otro).
+  \item Los archivos \href{http://www.edfplus.info/specs/edf.html}{\underline{EDF}} contienen señales digitalizadas
+  \item almacenadads en formato internacional. Estos archivos guardan la información de encabezado al comienzo del
+  \item archivo, a diferencia del formato MIT. A su vez pueden estar acompañados de archivos con anotaciones.
+  \item Por ejemplo, si existe un archivo \texttt{*.edf}, un archivo con anotaciones asociado podría ser
+  \item \texttt{*.edf.qrs}, donde \texttt{.qrs} es la extensión de las anotaciones en este caso (podría ser otro).
   \item Los archivos
-  \href{http://www.edfplus.info/specs/edfplus.html}{\underline{EDF+}} son archivos EDF que contienen anotaciones codificadas como señales.
+  \href{http://www.edfplus.info/specs/edfplus.html}{\underline{EDF+}} son archivos EDF que contienen anotaciones
+  \item codificadas como señales.
 \end{itemize}
 
 \indent La categoría utilizada en este trabajo es \textit{MIT Format}. Este formato debe ser leído con una librería

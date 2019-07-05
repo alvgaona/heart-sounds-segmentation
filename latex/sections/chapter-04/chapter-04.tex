@@ -302,14 +302,16 @@ de la onda T se define una ventana. En ella se busca el índice del máximo valo
 
 \subsubsection*{Diástole isovolumétrico (Estado \#4)}
 
-\indent De esta manera es posible calcular las muestras que corresponden al tercer estado. Antes es necesario redefinir el umbral superior.
+\indent De esta manera es posible calcular las muestras que corresponden al tercer estado. Antes es necesario
+redefinir el umbral superior.
 
 \begin{align}
   U_{b,i} = \mathrm{min}\left(N_i, \left\lceil  c_{w,i} + \frac{1}{2}\mu_{S_2} \right\rceil \right)
 \end{align}
 
 \begin{align}
-  \mathbf{s}_j = 3 \cdot \mathds{1}\left\{\mathrm{max}\left(\lceil c_{w,i}-\frac{1}{2}\mu_{S_2}\rceil, 1\right) < j < U_{b,i}\right\}
+  \mathbf{s}_j = 3 \cdot \mathds{1}\left\{\mathrm{max}\left(\lceil c_{w,i}-\frac{1}{2}\mu_{S_2}\rceil, 1\right) < j
+  < U_{b,i}\right\}
 \end{align}
 
 \indent Con $j=0,1,2,\dots,M-1$. \bigskip

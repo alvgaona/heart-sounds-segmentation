@@ -2,7 +2,7 @@ datasets/
 .DS_Store
 *.png
 .idea/
-images/
+img/
 
 ## LaTeX
 out/

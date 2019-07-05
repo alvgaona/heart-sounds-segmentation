@@ -1,10 +1,16 @@
 \chapter{Implementación} \label{cha:results}
 
-\indent Este capítulo tiene como objetivo mostrar y reflejar el trabajo hecho. El preprocesamiento y el procesamiento se ha explicado en capítulos anteriores. Aquí se mencionarán los elementos necesarios para la ejecutar la clasificación, como por ejemplo el \textit{framing}. Se describirá la arquitectura de la red \acrshort{lstm} utilizada, junto a la descripción de sus capas intermedias y los hiperparámetros seleccionados. \bigskip
+\indent Este capítulo tiene como objetivo mostrar y reflejar el trabajo hecho. El preprocesamiento y el
+procesamiento se ha explicado en capítulos anteriores. Aquí se mencionarán los elementos necesarios para la ejecutar
+la clasificación, como por ejemplo el \textit{framing}. Se describirá la arquitectura de la red \acrshort{lstm}
+utilizada, junto a la descripción de sus capas intermedias y los hiperparámetros seleccionados. \bigskip
 
-\subsection*{Diagrama de flujo del sistema}
+\subsection*{Diagrama de flujo del sistema} \label{subsec:flow-diagram}
 
-\indent Antes de abordar cada uno de los distintos pasos, se ilustra una diagrama de flujo de todo el sistema. Empezando desde el filtrado lineal para eliminar ruido que corrompa la señal, pasando por la extracción de marcas y la extracción de atributos para dar finalmente con la clasificación de los estados de la señal (diagrama que contempla tanto la etapa de entrenamiento como la de evaluación).
+\indent Antes de abordar cada uno de los distintos pasos, se ilustra una diagrama de flujo de todo el sistema.
+Empezando desde el filtrado lineal para eliminar ruido que corrompa la señal, pasando por la extra cción de marcas y
+la extracción de atributos para dar finalmente con la clasificación de los estados de la señal (diagrama que
+contempla tanto la etapa de entrenamiento como la de evaluación).
 
 
 \begin{figure}[H]
@@ -320,7 +326,8 @@ $\mathbf{E}_p \in \mathbb{R}^M$. Ambos asociados a un grupo $P \in \{0,1,2,\dots
   \bm{E}_{p} = \mathrm{fil_p}(\bm{F})
 \end{align}
 
-\indent De esta manera, quedan definidos los grupos para realizar los K entrenamientos y ponderar métricas de performance.
+\indent De esta manera, quedan definidos los grupos para realizar los K entrenamientos y ponderar métricas de
+performance.
 
 \section{Clasificación}
 
