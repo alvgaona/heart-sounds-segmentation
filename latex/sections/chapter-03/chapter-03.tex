@@ -1,4 +1,4 @@
-\chapter{Estudio de bases de datos} \label{cha:databases-study}
+\chapter{Estudio de bases de datos} \label{ch:databases-study}
 
 La selección de datos para la implementación del segmentador se extrajo de \textsc{PhysioNet}, organización apoyada
 por \textit{National Institute of General Medical Sciences} (\acrshort{nigms}) y \textit{National Institute of
@@ -73,7 +73,7 @@ de datos del desafío se proveen los \acrshort{ecg}, a los cuales es necesario e
 . Debido a que el alcance del trabajo es implementar un segmentador de PCG y no un extractor de anotaciones, se optó
 por utilizar la base de David Springer dado a que permite apoyarse sobre trabajos previos que ya han utilizado
 dichos datos, confiando en la naturaleza de estos datos y así realizar una mejor comparación en el Capítulo
-\ref{cha:results}. Asimismo, se referirá a la base seleccionada como "base de datos" para evitar confusión. \\
+\ref{ch:results}. Asimismo, se referirá a la base seleccionada como "base de datos" para evitar confusión. \\
 \indent Los datos de la base de datos se encuentran en formato \texttt{.mat} (formato propietario de
 \textsc{MATLAB\texttrademark}) y las anotaciones de las ondas R y fin de la T, se encuentran muestreadas a 50 Hz.
 Esto requiere de estandarizar el formato de los datos y acomodar la frecuencia de las anotaciones dado a que las
@@ -90,7 +90,7 @@ señales se encuentran a una frecuencia de muestreo mayor. Para ello, se tomó c
   del archivo de la señal asociado.
   \item Los archivos \textit{MIT Annotation} son archivos binarios que contienen anotaciones (etiquetas que
   generalmente refieren a muestras específicas de una señal asociada). Éstos deben ser leídos junto a los archivos
-  \texit{header} asociado. En caso de que en un directorio se vean archivos \texttt{\{RECORD\_NAME\}.dat}, y/o
+  \textit{header} asociado. En caso de que en un directorio se vean archivos \texttt{\{RECORD\_NAME\}.dat}, y/o
   \texttt{\{RECORD\_NAME\}.hea}, cualquier otro archivo con otra extensión es un archivo de anotaciones. Por ejemplo,
   \item \texttt{\{RECORD\_NAME\}.atr} es un archivo con anotaciones para esa señal.
 \end{itemize}
@@ -116,7 +116,8 @@ disponible, incluyendo todas las versiones Unix, MS-DOS, MS-Windows, the Macinto
 librería de WFDB puede ser compilada con HTTP o FTP como input sin tener que bajar localmente toda la base de datos
 para un procesamiento. \\
 \indent En este trabajo se utilizó \textit{WFDB Toolbox for MATLAB\texttrademark}, el cual provee acceso desde
-\textsc{MATLAB} a las aplicaciones de \texttt{WFDB}. Esta toolbox provee \texttt{MATLAB\texttrademark} y Java
+\textsc{MATLAB\texttrademark} a las aplicaciones de \texttt{WFDB}. Esta toolbox provee \textsc{MATLAB\texttrademark} y
+Java
 \textit{wrappers} para las distintas aplicaciones y un instalador que instala la toolbox en sí misma y el
 \textit{WFDB Software Package} precompilado. Esta toolbox corre en 64-bit \textsc{MATLAB\texttrademark} R2010b o
 mayor en \textit{GNU/Linux}, \textit{Mac OS X}, y \textit{MS-Windows}. \\
