@@ -176,13 +176,13 @@ procesamiento.
     \thead{$94.8 \pm 1.8$} &
     \thead{$94.3 \pm 1.8$} \\
     \hline
-    \thead{\gls{cnn}+max \cite{pp:renna2018}} &
+    \thead{\acrshort{cnn}+max \cite{pp:renna2018}} &
     \thead{$\mathbf{95.7 \pm 1.3}$} &
     \thead{$\mathbf{93.7} \pm \mathbf{1.0}$} &
     \thead{$\mathbf{95.7} \pm \mathbf{1.4}$} &
     \thead{$\mathbf{95.7} \pm \mathbf{1.2}$} \\
     \hline
-    \thead{\gls{lstm}} &
+    \thead{\acrshort{lstm}} &
     \thead{$84.9 \pm 4.3$} &
     \thead{$93.3 \pm 1.4$} &
     \thead{$85.3 \pm 3.8$} &
@@ -222,11 +222,11 @@ así con el resto de los estados.
 \indent Esta ecuación necesita una semilla donde $\hat{s}(0) = \Tilde{s}(0)$. La principal ventaja de este método es
 la baja complejidad algorítmica y la posibilidad de aplicarlo en una segmentación en tiempo real.
 
-\subsubsection*{Modelado basado en Cadenas Ocultas de Markov (\gls{hmm})}
+\subsubsection*{Modelado basado en Cadenas Ocultas de Markov (\acrshort{hmm})}
 
 \indent Estrategias más complejas se pueden aplicar para restringir las posibles transiciones. La idea es utilizar
 las probabilidades a posteriori que la red provee en la matriz $\mathbf{B}$. En particular, es posible utilizar esas
-probabilidades en un modelo \gls{hmm} que restringue estas transiciones. Este modelo se describe en función de
+probabilidades en un modelo \acrshort{hmm} que restringue estas transiciones. Este modelo se describe en función de
 los siguientes parámetros: probabilidad a priori de los estados $\pi$, la probabilidad de transiciones de los
 estados dada por $\gamma_{i,j} = p(s(t)=j|s(t-1)=i)$ y las probabilidades de emisión $e_{t,j} = p(\mathbf{x}(t)|s(t)
 = j)$. En el caso de $\pi$ y $\gamma_{i,j}$ se pueden estimar mediante el método de Máxima Verosimilitud
@@ -247,7 +247,7 @@ de emisión $\mathbf{x}(t)$.
 
 \indent En este caso la distribución $p(\mathbf{x}(t))$ es aproximada por una gaussiana multivariable cuya media y
 matriz de covarianza son estimados a partir de los datos de entrenamiento usando ML. \\
-\indent Luego, el modelo \gls{hmm} se encarga de determinar la sequencia de estados asociada que maximimiza la
+\indent Luego, el modelo \acrshort{hmm} se encarga de determinar la sequencia de estados asociada que maximimiza la
 función de verosimilitud mediante el algoritmo de Viterbi.
 
 \begin{align}
@@ -257,7 +257,7 @@ función de verosimilitud mediante el algoritmo de Viterbi.
 \indent De esta manera la sequencia $\hat{s}(t)$ se consigue a partir de la secuencia que maximiza la función de
 verosimilitud.
 
-\subsubsection*{Modelado basado en Cadenas Ocultas de Markov dependientes del tiempo (\gls{dhmm})}
+\subsubsection*{Modelado basado en Cadenas Ocultas de Markov dependientes del tiempo (\acrshort{dhmm})}
 
 \indent Las probabilidades de emisiones del método anterior, también son utilizadas en este. Además, se introduce la
 dependencia del tiempo en donde se modela al tiempo en un estado como una distribución gaussiana donde su media y
@@ -268,6 +268,6 @@ partir del algoritmo de Viterbi se decodifica la secuencia $\hat{s}(t)$.
 
 \indent Nuevamente las probabilidades de emisión se utilizan en este método. La distribución de los tiempos en un
 estado siguen siendo gaussianas, sin embargo las medias y varianzas se computan con el método explicado en
-\cite{pp:oliveira-renna-coimbra} a partir de la información del \gls{pcg}. Así se estiman los parámetros que
-mejor se adaptan al \gls{pcg} a partir de la maximización de una función de verosimilitud incompleta asociada a
+\cite{pp:oliveira-renna-coimbra} a partir de la información del \acrshort{pcg}. Así se estiman los parámetros que
+mejor se adaptan al \acrshort{pcg} a partir de la maximización de una función de verosimilitud incompleta asociada a
 la secuencia $\mathbf{x}(t)$, $t=0,1,\dots,T-1$. Por supuesto, la secuencia $\hat{s}(t)$ es estimada por Viterbi.

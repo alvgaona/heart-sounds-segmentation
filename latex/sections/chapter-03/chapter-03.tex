@@ -1,8 +1,8 @@
 \chapter{Estudio de bases de datos} \label{ch:databases-study}
 
 La selección de datos para la implementación del segmentador se extrajo de \textsc{PhysioNet}, organización apoyada
-por \textit{National Institute of General Medical Sciences} (\gls{nigms}) y \textit{National Institute of
-Biomedical Imaging and Bioengineering} (\gls{nibib}). Esta organización se dedica a ofrecer, de manera
+por \textit{National Institute of General Medical Sciences} (\acrshort{nigms}) y \textit{National Institute of
+Biomedical Imaging and Bioengineering} (\acrshort{nibib}). Esta organización se dedica a ofrecer, de manera
 gratuita, acceso a un gran cantidad de señales fisiológicas y herramientas para el procesamiento de las mismas. \\
 \indent Particularmente, se extrajeron dos base de datos. Una asociada a a un desafío público en el año 2016 que se
 denominaba ``\textit{Classification of Normal/Abnormal Heart Sound Recordings: the PhysioNet/Computing in Cardiology
@@ -31,7 +31,7 @@ de la base de datos.
 \end{table}
 
 \indent Señales recolectadas en ambientes clínicos y no clínicos, y de pacientes sanos y patológicos. El total es de
-3126 fonocardiogramas para el set de entrenamiento (sólo el set A viene acompañado de señales del \gls{ecg} y
+3126 fonocardiogramas para el set de entrenamiento (sólo el set A viene acompañado de señales del \acrshort{ecg} y
 300 fonocardiogramas para el set de validación. \\
 \indent Estos fonocardiogramas fueron extraídos del área aórtica, área pulmonar, área tricúspide y mitral. En cada
 subset de datos, se clasificaron en fonocardiogramas normales y anormales. Los fonocardiogramas normales fueron
@@ -59,7 +59,7 @@ patológica.
 \section{Selección y normalización de datos} \label{sec:data-selection-normalization}
 
 Ya vimos que estas base de datos contienen datos que difieren entre si. Desde la cantidad de señales hasta los tipos
-de datos (\gls{ecg}, anotaciones del \gls{ecg}, frecuencia de muestreo). \\
+de datos (\acrshort{ecg}, anotaciones del \acrshort{ecg}, frecuencia de muestreo). \\
 \indent Dicho esto es necesario decidir por una base de datos en una primera instancia. Para ponerlo en términos
 cuantitativos, por qué la elección de una base respecto de la otra, se menciona lo siguiente. La frecuencia de
 muestreo no es un problema, por lo tanto tanto 1 KHz como 2 KHz es más que suficiente para tener una buena
@@ -69,7 +69,7 @@ trabajo y no afecta a la selección de los datos. Sin embargo, esto sirve para i
 encuentre desbalanceada respecto a la proporción de sanos como enfermos. El punto crítico de la selección de la base
 se debe a las anotaciones del electocardiograma. La base de datos de Springer \cite{ref:logi-regression-springer} ya
 contiene marcas extraídas automáticamente y filtradas por un algoritmo de concordancia. De lo contrario, en la base
-de datos del desafío se proveen los \gls{ecg}, a los cuales es necesario extraerles las marcas correspondientes
+de datos del desafío se proveen los \acrshort{ecg}, a los cuales es necesario extraerles las marcas correspondientes
 . Debido a que el alcance del trabajo es implementar un segmentador de PCG y no un extractor de anotaciones, se optó
 por utilizar la base de David Springer dado a que permite apoyarse sobre trabajos previos que ya han utilizado
 dichos datos, confiando en la naturaleza de estos datos y así realizar una mejor comparación en el Capítulo
@@ -78,7 +78,7 @@ dichos datos, confiando en la naturaleza de estos datos y así realizar una mejo
 \textsc{MATLAB\texttrademark}) y las anotaciones de las ondas R y fin de la T, se encuentran muestreadas a 50 Hz.
 Esto requiere de estandarizar el formato de los datos y acomodar la frecuencia de las anotaciones dado a que las
 señales se encuentran a una frecuencia de muestreo mayor. Para ello, se tomó como estándar el formato
-\gls{wfdb} (\textit{Waveform Database}), el cual contiene dos categorías estándar, \textit{MIT Format} y
+\acrshort{wfdb} (\textit{Waveform Database}), el cual contiene dos categorías estándar, \textit{MIT Format} y
 \textit{EDF Format}.
 
 \subsection*{MIT Format}

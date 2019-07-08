@@ -2,7 +2,7 @@
 
 \indent \textit{Deep Learning} es un conjunto de métodos de aprendizaje que intentan modelar problemas con
 arquitecturas complejas combinando diferentes transformaciones no lineales. Los pilares fundamentales son las redes
-neuronales. Combinadas logran formar las \gls{dnn} (\textit{deep learning neural network}).
+neuronales. Combinadas logran formar las \acrshort{dnn} (\textit{deep learning neural network}). \\
 \indent Estas técnicas han logrado un avance significativo en los campos de procesamiento de sonidos y de imágenes,
 éstos incluyen reconocimiento facial, reconocimiento del habla, visión computadorizada, entre otros.
 
@@ -79,21 +79,21 @@ encuentra cerca de 0.
 \indent Es el caso de \textit{deep learning} que se utilizan múltiples capas de redes neuronales, lo cual trae
 problemas
 con el algoritmo de retropropagación para estimar parámetros. Éste es el por qué la función sigmoidea fue reemplazada
-por la función \gls{relu} (\textit{Rectified Linear Unit}).
+por la función \acrshort{relu} (\textit{Rectified Linear Unit}).
 
 \begin{figure}[H]
   \centering
   \includegraphics[scale=0.3]{sections/chapter-06/images/ReLU.png}
-  \caption[Función de activación \gls{relu}.]{Función de activación \gls{relu}. El línea sólida se muestra
+  \caption[Función de activación \acrshort{relu}.]{Función de activación \acrshort{relu}. El línea sólida se muestra
   la función de activación y su derivada en línea punteada.}
   \label{fig:sigmoid}
 \end{figure}
 
 \indent Esta función no es diferenciable en cero, pero en la práctica esto no es un problema dado a que la
-probabilidad de que una entrada sea igual a cero es casi nula. La función \gls{relu} también tiene la propiedad
+probabilidad de que una entrada sea igual a cero es casi nula. La función \acrshort{relu} también tiene la propiedad
 de dispersión (\textit{sparcification}). Ella y su derivada son 0 para valores negativos, y no es posible obtener
 información en estos casos, pero eso es recomendable agregar un pequeño sesgo para asegurar de que cada unidadad se
-encuentre activa. Muchas variaciones de la función \gls{relu} consideran mantener a las unidades siempre
+encuentre activa. Muchas variaciones de la función \acrshort{relu} consideran mantener a las unidades siempre
 activas y que sus gradientes para valores negativos no sean 0.
 
 \section{Perceptrón multicapa}
@@ -113,7 +113,7 @@ del problema en cuestión: regresión o clasificación.
   \label{fig:mlp_net}
 \end{figure}
 
-\indent \gls{mlp} (Multilayer perceptron) tienen una arquitectura básica. Cada unidad o neurona de una capa se
+\indent \acrshort{mlp} (Multilayer perceptron) tienen una arquitectura básica. Cada unidad o neurona de una capa se
 conecta a todas las neuronas de la siguiente capa y no tienen conexión con las neuronas de la misma capa. Los
 parámetros de la arquitectura son la cantidad de capas y el número de unidades por capa. Generalmente, como se ha
 dicho antes, la función de activación es diferente a las otras intermedias. En el caso de clasificación binaria, la
@@ -162,19 +162,19 @@ deben ser estimados a partir de muestras. Como es común, estas estimaciones se 
 de lo que se cononce como función de costo (\textit{loss function}) \\
 \indent Existen distintos tipos de funciones de costo. Éstas dependen del problema a resolver. 1) regresión:
 \begin{itemize}
-  \item Error cuadrático medio (\gls{mse})\footnote{La función de costo \gls{mse} se conoce también como:
+  \item Error cuadrático medio (\acrshort{mse})\footnote{La función de costo \acrshort{mse} se conoce también como:
   \item \textit{Quadratic Loss} o \textit{L2 loss}}
   \begin{align}
     \mathbf{MSE} = \frac{\sum_{i=1}^n (y_i - \hat{y}_i)^2}{n}
   \end{align}
 
-  \item Error absoluto medio (\gls{mae})\footnote{Se conoce a la función de costo \gls{mae} como:
+  \item Error absoluto medio (\acrshort{mae})\footnote{Se conoce a la función de costo \acrshort{mae} como:
   \item \textit{L1 loss}}
   \begin{align}
     \mathbf{MAE} = \frac{\sum_{i=1}^n |y_i - \hat{y}_i|}{n}
   \end{align}
 
-  \item Error de sesgo medio (\gls{mbe})
+  \item Error de sesgo medio (\acrshort{mbe})
   \begin{align}
     \mathbf{MBE} = \frac{\sum_{i=1}^n (y_i - \hat{y}_i)}{n}
   \end{align}
@@ -206,7 +206,7 @@ una distribución normal, $W_{i,j}^{(k)} \sim \mathcal{N}(0,0.01)$.
 
 \indent Existen una variadad extensa de algoritmos para minimizar las funciones de costo y todos estos poseen
 hiperparámetros que deben ser calibrados. Éstos tienen un impacto importante en la convergencia de los mismos. Una
-herramienta básica en todos estos algoritmos es lo que se conoce como \gls{sgd} (\textit{Stochastic Gradient
+herramienta básica en todos estos algoritmos es lo que se conoce como \acrshort{sgd} (\textit{Stochastic Gradient
 Descent}). Es la más simple.
 
 \begin{align}
@@ -217,7 +217,7 @@ Descent}). Es la más simple.
 la convergencia es muy lenta y puede quedar bloqueada en un mínimo local. Si es muy grande, la convergencia puede
 oscilar alrededor de un óptimo sin estabilizarse y converger. Es recomendable comenzar con un $\epsilon$ grande e ir
 iterando. \\
-\indent El algoritmo \gls{sgd} consiste en computar el gradiente. Para ello se considera la técnica de
+\indent El algoritmo \acrshort{sgd} consiste en computar el gradiente. Para ello se considera la técnica de
 aprendizaje por lotes (\textit{batch learning}), en el que en cada paso $m$ muestras son elegidas al azar y la media
 de esas $m$ muestras se utilizara para actualizar los parámetros. Luego, otro concepto es lo que se denomina como
 \textit{epoch}, proveniente del inglés. Se define \textit{epoch} al paso de todo el set de entrenamiento por la red
@@ -240,11 +240,11 @@ pesos de algunas unidades a 0.
 
 % \section{Redes neuronales convolucionales}
 
-% \indent Existen problemas, donde los \gls{mlp} no resuelven determinadas cuestiones y no se adaptan. Los perceptrones multicapa tienene como entrada vectores, los cuales en los casos que la información proviene de imágenes, deberían transformarse las imágenes en vectores perdiendo la forma de noción espacial que proveen éstas. Las redes convolucionales actuan directamente sobre matrices o tensores con tres canales \gls{rgb}. Actualmente las \gls{cnn}, se utilizan para clasificación, segmentación, reconocimiento de objetos y reconocimiento facial.
+% \indent Existen problemas, donde los \acrshort{mlp} no resuelven determinadas cuestiones y no se adaptan. Los perceptrones multicapa tienene como entrada vectores, los cuales en los casos que la información proviene de imágenes, deberían transformarse las imágenes en vectores perdiendo la forma de noción espacial que proveen éstas. Las redes convolucionales actuan directamente sobre matrices o tensores con tres canales \acrshort{rgb}. Actualmente las \acrshort{cnn}, se utilizan para clasificación, segmentación, reconocimiento de objetos y reconocimiento facial.
 
 % \subsection{Capas en una red convolucional}
 
-% \indent Una \gls{cnn} puede estar compuesta por distintas capas intermedias: capas convolucionales, \textit{pooling layers}, \textit{fully conected layers}.
+% \indent Una \acrshort{cnn} puede estar compuesta por distintas capas intermedias: capas convolucionales, \textit{pooling layers}, \textit{fully conected layers}.
 
 % \subsection{Capa convolucional}
 
@@ -277,21 +277,21 @@ pesos de algunas unidades a 0.
 % \end{figure}
 
 % \indent En el ejemplo de la Figura \ref{fig:2d-convolution-example} la imagen, $I \in \mathbb{R}^{3\times4}$ y el filtro, $K \in \mathbb{R}^{2 \times 2}$ con un $s = 1$ y $p = 0$, se obtiene una salida de $2 \times 3 \times 1$ ($C_0$ es 1). \\
-% \indent Las operaciones de convolución son combinadas con una función de activación $\phi$ (generalmente la función \gls{relu}). Si se considera un filtro de $k \times k$, si $\mathbf{x}$ es una porción $k \times k $ de la imagen, la activación se obtiene tras deslizar una ventana de $k \times k$ y computando $z(\bm{x})=\phi(\bm{K} \cdot \bm{x}+\bm{b})$, donde $\bm{b}$ es el sesgo.
+% \indent Las operaciones de convolución son combinadas con una función de activación $\phi$ (generalmente la función \acrshort{relu}). Si se considera un filtro de $k \times k$, si $\mathbf{x}$ es una porción $k \times k $ de la imagen, la activación se obtiene tras deslizar una ventana de $k \times k$ y computando $z(\bm{x})=\phi(\bm{K} \cdot \bm{x}+\bm{b})$, donde $\bm{b}$ es el sesgo.
 
 % \subsection{Pooling layer}
 
-% \indent Las \gls{cnn} tiene capas que permiten reducir las dimensiones, también referido como submuestreo, tomando la media o el máximo en porciones de la imagen (\textit{mean-pooling} o \textit{max-pooling}). A su vez, este tipo de capas tienen, al igual que las capas convolucionales, un paso o stride. Otra propiedad, es la de hacer la red menos sensible a pequeñas transiciones de la imagen de entrada.
+% \indent Las \acrshort{cnn} tiene capas que permiten reducir las dimensiones, también referido como submuestreo, tomando la media o el máximo en porciones de la imagen (\textit{mean-pooling} o \textit{max-pooling}). A su vez, este tipo de capas tienen, al igual que las capas convolucionales, un paso o stride. Otra propiedad, es la de hacer la red menos sensible a pequeñas transiciones de la imagen de entrada.
 
 % \subsection{Fully-connected layers}
 
-% \indent Luego de haber aplicado varias capas convolucionales, las \gls{cnn} terminan con una \textit{fully-connected layer}. El tensor a la salida de estas capas son transformadas en vectores como entradas a perceptrones.
+% \indent Luego de haber aplicado varias capas convolucionales, las \acrshort{cnn} terminan con una \textit{fully-connected layer}. El tensor a la salida de estas capas son transformadas en vectores como entradas a perceptrones.
 
 \section{Redes neuronales recurrentes} \label{sec:rnn}
 
 \indent A fin de inferir data secuencial, tal como texto o señales en el tiempo, aparecen las redes neuronales
 recurrentes. La forma más simple de una red neuronal recurrente tiene múltiples copias de la misma red, cada una
-pasando información a su sucesora. La primer red neuronal recurrente, era una \gls{mlp} con un bucle hacia si
+pasando información a su sucesora. La primer red neuronal recurrente, era una \acrshort{mlp} con un bucle hacia si
 misma. Definiendo $x(t)$, $\hat{y}(t)$, $\hat{z}(t)$ como la entrada, la salida y la capa intermedia en tiempo $t$
 respectivamente.
 
@@ -307,9 +307,9 @@ del análisis lingüístico. Aunque, nuevas arquitecturas se han desarrollado pa
 \subsection*{Long Short-Term Memory}
 
 \indent Las RNN han sido exitosas en varias aplicaciones como han de ser reconocimiento del habla, traducción, entre
-otros. Este éxito se debe a la eficiencia de las redes \gls{lstm}, que es una especie de red recurrente. Las
-redes \gls{lstm} fueron introducidas por Hochreiter y Schmidhuber (1997) \cite{pp:hochreiter-schmidhuber} y
-fueron creadas con el propósito de aprender dependencias a largo plazo. Una celda \gls{lstm} comprende, en un
+otros. Este éxito se debe a la eficiencia de las redes \acrshort{lstm}, que es una especie de red recurrente. Las
+redes \acrshort{lstm} fueron introducidas por Hochreiter y Schmidhuber (1997) \cite{pp:hochreiter-schmidhuber} y
+fueron creadas con el propósito de aprender dependencias a largo plazo. Una celda \acrshort{lstm} comprende, en un
 instante $t$, un estado $C_t$ y una salida $h_t$. Como entrada, la celda requiere $x_t$, $C_{t-1}$, $h_{t-1}$.
 Dentro de la celda, existen compuertas o \textit{gates} que permiten, o no, el paso de información. Este
 comportamiento está dado por el siguiente conjunto de ecuaciones.
@@ -367,19 +367,19 @@ comportamiento está dado por el siguiente conjunto de ecuaciones.
 \end{itemize}
 
 \indent La Figura \ref{fig:lstm-schematic} refleja la diferencia entre una celda RNN tradicional y una celda
-\gls{lstm}. Una celda RNN contiene sólo una capa. En cambio, la celda \gls{lstm} contiene 4 capas dadas
+\acrshort{lstm}. Una celda RNN contiene sólo una capa. En cambio, la celda \acrshort{lstm} contiene 4 capas dadas
 por los bloques amarillos, interactuando entre ellas como se describen en las ecuaciones anteriores.
 
 \begin{figure}[H]
   \centering
   \includegraphics[scale=0.5]{sections/chapter-06/images/lstm-schematic.png}
-  \caption[Diagrama de una red \gls{lstm}]{Diagrama de una red \gls{lstm}. Imagen extraída de
-  \href{http://colah.github.io/posts/2015-08-Understanding-\gls{lstm}s/}{\textit{"Understanding \gls{lstm}
+  \caption[Diagrama de una red \acrshort{lstm}]{Diagrama de una red \acrshort{lstm}. Imagen extraída de
+  \href{http://colah.github.io/posts/2015-08-Understanding-\acrshort{lstm}s/}{\textit{"Understanding \acrshort{lstm}
   Networks"}}}
   \label{fig:lstm-schematic}
 \end{figure}
 
-\indent Las redes \gls{lstm} son las elegidas en este trabajo. La particularidad de estas redes, como se ha
+\indent Las redes \acrshort{lstm} son las elegidas en este trabajo. La particularidad de estas redes, como se ha
 mencionado anteriormente, es la eficiencia para los problemas de señales en el tiempo.
 
 \section{Sobre-entrenamiento}
@@ -453,59 +453,59 @@ continuación.
 \begin{itemize}
   \item Sensibilidad
   \begin{align}
-    \gls{tpv} = \frac{\gls{tp}}{\gls{tp}+\gls{fn}}
+    \acrshort{tpv} = \frac{\acrshort{tp}}{\acrshort{tp}+\acrshort{fn}}
   \end{align}
 
   \item Especificidad
   \begin{align}
-    \gls{tnr} = \frac{\gls{tn}}{\gls{tn}+\gls{fp}}
+    \acrshort{tnr} = \frac{\acrshort{tn}}{\acrshort{tn}+\acrshort{fp}}
   \end{align}
 
   \item Precisión
   \begin{align}
-    \gls{ppv} = \frac{\gls{tp}}{\gls{tp}+\gls{fp}}
+    \acrshort{ppv} = \frac{\acrshort{tp}}{\acrshort{tp}+\acrshort{fp}}
   \end{align}
 
   \item Valor Predictivo Negativo
   \begin{align}
-    \gls{npv} = \frac{\gls{tn}}{\gls{tn}+\gls{fn}}
+    \acrshort{npv} = \frac{\acrshort{tn}}{\acrshort{tn}+\acrshort{fn}}
   \end{align}
 
   \item Tasa de error
   \begin{align}
-    \gls{fnr} = \frac{\gls{fn}}{\gls{fn}+\gls{tp}}
+    \acrshort{fnr} = \frac{\acrshort{fn}}{\acrshort{fn}+\acrshort{tp}}
   \end{align}
 
   \item Tasa de falsos positivos
   \begin{align}
-    \gls{fpr} = \frac{\gls{fp}}{\gls{fp}+\gls{tn}}
+    \acrshort{fpr} = \frac{\acrshort{fp}}{\acrshort{fp}+\acrshort{tn}}
   \end{align}
 
   \item Tasa de descubrimiento
   \begin{align}
-    \gls{fdr} = \frac{\gls{fp}}{\gls{fp}+\gls{tp}}
+    \acrshort{fdr} = \frac{\acrshort{fp}}{\acrshort{fp}+\acrshort{tp}}
   \end{align}
 
   \item Tasa de omisión
   \begin{align}
-    \gls{for} = \frac{\gls{fn}}{\gls{fn}+\gls{tn}}
+    \acrshort{for} = \frac{\acrshort{fn}}{\acrshort{fn}+\acrshort{tn}}
   \end{align}
 
   \item Exctitud
   \begin{align}
-    \gls{acc} = \frac{\gls{tp}+\gls{tn}}{\gls{tp}+\gls{tn}+\gls{fn}+\gls{fp}}
+    \acrshort{acc} = \frac{\acrshort{tp}+\acrshort{tn}}{\acrshort{tp}+\acrshort{tn}+\acrshort{fn}+\acrshort{fp}}
   \end{align}
 
   \item Puntaje F$_1$
   \begin{align}
-    F_1 = \frac{2\gls{tp}}{2\gls{tp}+\gls{fp}+\gls{fn}}
+    F_1 = \frac{2\acrshort{tp}}{2\acrshort{tp}+\acrshort{fp}+\acrshort{fn}}
   \end{align}
 \end{itemize}
 
 \indent Las métricas que aquí se trabajarán son exactitud ($ACC$), precisión ($P_+$), sensibilidad ($Se$) y $F_1$.
 Los motivos de esta decisión es la naturaleza de la aplicación y por comparación de desempeño con otros trabajos
 publicados. \\
-\indent \gls{tp} define a los verdaderos positivos y \gls{tn} a los verdaderos negativos. En base a estos
+\indent \acrshort{tp} define a los verdaderos positivos y \acrshort{tn} a los verdaderos negativos. En base a estos
 dos parámetros se pueden calcular todas las métricas mencionadas. Por otro lado, cabe destacar que dependiendo de la
-cantidad de clases que el problema posea, es necesario computar \gls{tp} y \gls{tn} para cada una de ellas
+cantidad de clases que el problema posea, es necesario computar \acrshort{tp} y \acrshort{tn} para cada una de ellas
 . Más adelante, se dará un ejemplo en el caso de 4 clases.

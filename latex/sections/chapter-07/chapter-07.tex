@@ -2,7 +2,7 @@
 
 \indent Este capítulo tiene como objetivo mostrar y reflejar el trabajo hecho. El preprocesamiento y el
 procesamiento se ha explicado en capítulos anteriores. Aquí se mencionarán los elementos necesarios para la ejecutar
-la clasificación, como por ejemplo el \textit{framing}. Se describirá la arquitectura de la red \gls{lstm}
+la clasificación, como por ejemplo el \textit{framing}. Se describirá la arquitectura de la red \acrshort{lstm}
 utilizada, junto a la descripción de sus capas intermedias y los hiperparámetros seleccionados. \bigskip
 
 \subsection*{Diagrama de flujo del sistema} \label{subsec:flow-diagram}
@@ -89,9 +89,9 @@ D$ y $D$ la cantidad total de señales, se itera sobre todo el set de datos y se
 
 \indent Una vez hecho el acondicionamiento de la señal (filtrado, normalización en términos de energía) y los
 cuadros listos, se procede a extraer los features necesarios a introducir al clasificador. Los features extraídos
-son obtenidos por medio de la \gls{fsst}, el clasificador es una red diseñada con celdas \gls{lstm}. \bigskip
+son obtenidos por medio de la \acrshort{fsst}, el clasificador es una red diseñada con celdas \acrshort{lstm}. \bigskip
 
-\indent Para la extracción de features en tiempo-frecuencia se utilizó la \gls{fsst}. Esta se aplica sobre
+\indent Para la extracción de features en tiempo-frecuencia se utilizó la \acrshort{fsst}. Esta se aplica sobre
 segmentos de señal extraídos del proceso de encuadrado. \\
 \indent En esta ocasión, no se utiliza solapamiento de cuadros (\textit{frames}), con lo cual cada segmento de señal
 posee información única a excepción de una muestra. Previamente, se eligen las señales mayores o iguales a una
@@ -151,12 +151,12 @@ dicho rango. Por ende, se extraen los features entre 20-200 Hz como entrada al c
   \begin{subfigure}{\textwidth}
     \centering
     \includegraphics[scale=0.25]{sections/chapter-07/images/fsst-plot.png}
-    \caption[Magnitud de la \gls{fsst} aplicada a un segmento de señal de fonocardiograma]{Magnitud de la
-    \gls{fsst} aplicada a un segmento de señal de fonocardiograma.}
+    \caption[Magnitud de la \acrshort{fsst} aplicada a un segmento de señal de fonocardiograma]{Magnitud de la
+    \acrshort{fsst} aplicada a un segmento de señal de fonocardiograma.}
     \label{fig:fsst-diagram}
   \end{subfigure}
-  \caption[Ejemplo de la transformada \gls{fsst} a un segmento de señal de \gls{pcg}]{Ejemplo de la
-  transformada \gls{fsst} a un segmento de señal de \gls{pcg}.}
+  \caption[Ejemplo de la transformada \acrshort{fsst} a un segmento de señal de \acrshort{pcg}]{Ejemplo de la
+  transformada \acrshort{fsst} a un segmento de señal de \acrshort{pcg}.}
   \label{fig:pcg-fsst}
 \end{figure}
 
@@ -166,8 +166,8 @@ fundamentales. También, en este ejemplo, hay energía proveniente de otras fuen
 
 \subsection{Modelo} \label{subsec:model}
 
-\indent El clasificador es una red neuronal \gls{lstm} como se ha mencionado anteriormente. Los parámetros a
-estimar del modelo pertenecen a la capa \gls{lstm}. Por otro lado, es predefinir los hiperparámetros de la red
+\indent El clasificador es una red neuronal \acrshort{lstm} como se ha mencionado anteriormente. Los parámetros a
+estimar del modelo pertenecen a la capa \acrshort{lstm}. Por otro lado, es predefinir los hiperparámetros de la red
 neuronal. Además de la capa recurrente, a una red neuronal la componen otras capas intermedias y una capa de entrada
 y salida.
 
@@ -187,7 +187,7 @@ y salida.
 \subsubsection{Hiperparámetros}
 
 \indent Ya se ha visto que es necesario establecer hiperparámetros de la red. Para el entrenamiento se utiliza el
-algortimo publicado en 2014 en la \gls{iclr} 2015, denominado \textit{Adam} \cite{pp:adam}. El algoritmo
+algortimo publicado en 2014 en la \acrshort{iclr} 2015, denominado \textit{Adam} \cite{pp:adam}. El algoritmo
 introduce ciertos hiperparámetros además de los convencionales que es necesario definir a priori. \\*
 \indent Los hiperparámetros utilizados en la implementación se listan a continuación \footnote{Los nombres de los
 hiperparámetros se encuentran en inglés, dado a que no hay literatura en español y muchos de ellos no tienen
@@ -279,13 +279,13 @@ es la ya mencionada en el Capítulo \ref{ch:deep-learning}, validación cruzada 
 $\mathbf{l}_i \in \mathbb{R}^N$ y la cantidad de \textit{folds} $K$. La cantidad de fonocardiogramas está dada por
 el valor $L$, por lo tanto $i = 0,1,2,\dots,L-1$. \bigskip
 
-\indent De esta manera se define $M$ como la cantidad de \gls{pcg} por \textit{fold}.
+\indent De esta manera se define $M$ como la cantidad de \acrshort{pcg} por \textit{fold}.
 
 \begin{align}
   M = \left\lfloor \frac{L}{K} \right\rfloor
 \end{align}
 
-\indent Por lo tanto la ecuación \ref{eq:fold-selection} define cómo asignar cada \gls{pcg} a un \textit{fold}.
+\indent Por lo tanto la ecuación \ref{eq:fold-selection} define cómo asignar cada \acrshort{pcg} a un \textit{fold}.
 
 \begin{align} \label{eq:fold-selection}
  F_{n,j} = i, \quad (n \cdot M) < i < (n+1) \cdot (M-1)
