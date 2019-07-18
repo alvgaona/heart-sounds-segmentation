@@ -1,4 +1,4 @@
-% function [hilbert_envelope] = hilbertEnvelope(input_signal, sampling_frequency,figures)
+% function [hilbert_envelope] = hilbertEnvelope(input_signal, sampling_frequency)
 %
 % This function finds the Hilbert envelope of a signal. This is taken from:
 %
@@ -34,17 +34,6 @@
 %
 % You should have received a copy of the GNU General Public License
 % along with this program.  If not, see <http://www.gnu.org/licenses/>.
-function hilbert_envelope = hilbertEnvelope(input_signal, sampling_frequency,figures)
-  if nargin <3,
-    figures = 0;
-  end
+function hilbert_envelope = hilbertEnvelope(input_signal, sampling_frequency)
   hilbert_envelope = abs(hilbert(input_signal)); %find the envelope of the signal using the Hilbert transform
-  if(figures)
-    figure('Name', 'Hilbert Envelope');
-    plot(input_signal');
-    hold on;
-    plot(hilbert_envelope,'r');
-    legend('Original Signal','Hilbert Envelope');
-    pause();
-  end
 end

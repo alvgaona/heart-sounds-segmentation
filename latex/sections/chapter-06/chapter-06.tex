@@ -398,39 +398,47 @@ parámetros quedan en un estado indefinido.
 \indent Antes de entrar en detalle en la extracción de los atributos tiempo-frecuencia, es necesario definir el
 método de entrenamiento elegido en este trabajo. \\
 \indent Validación cruzada (\textit{cross-validation}) es un método de validación de un modelo para analizar los
-resultados estadísticos tal que éstos se encuentren los más generalizado a cualquier set de datos. Es comúnmente
-usado donde el objetivo es la predicción, y se quiere saber cuán exacto y preciso el modelo predictivo es en la
-práctica. En un problema de predicción, se define un set de datos de entrenamiento y otro conunto de datos de
+resultados estadísticos tal que éstos se encuentren los más generalizado a cualquier set de datos.
+Es comúnmente usado donde el objetivo es la predicción, y se quiere saber cuán exacto y preciso el modelo predictivo
+es en la práctica.
+En un problema de predicción, se define un set de datos de entrenamiento y otro conjunto de datos de
 evaluación. El primero, es un conjunto de datos en el cual el modelo predictivo estimará sus parámetros para luego
-predecir datos que no hayan sido visto nunca. Aquí es cuando entra el conjunto de datos de evaluación, que va a ser
-visto por primera vez por el modelo. Este método tiene como objetivo solucionar el problema de sobre-entrenamiento. \\
+predecir datos que no hayan sido visto nunca.
+Aquí es cuando entra el conjunto de datos de evaluación, que va a ser visto por primera vez por el modelo. Este
+método tiene como objetivo solucionar el problema de sobre-entrenamiento. \\
 \indent Existen varias técnicas dentro de validación cruzada. En este trabajo se hará hincapié en el denominado
-\textit{K-Folds}. Éste consiste en dividir el set completo de datos en $K$ grupos (generalmente es común utilizar $K
-= 10$). El entrenamiento por ende se realizará $K$ veces, eligiendo en cada iteración un grupo de evaluación que no
-haya sido elegido previamente. El resto de los grupos se utilizarán como entrenamiento. De esta manera se computarán
-todas las métricas elegidas, $K$ veces y se computará la media, y el desvío de cada una de ellas.
+\textit{K-Folds}.
+Éste consiste en dividir el set completo de datos en $K$ grupos (generalmente es común utilizar $K = 10$).
+El entrenamiento por ende se realizará $K$ veces, eligiendo en cada iteración un grupo de evaluación que no haya sido
+elegido previamente. El resto de los grupos se utilizarán como entrenamiento.
+De esta manera se computarán todas las métricas elegidas, $K$ veces y se computará la media, y el desvío de cada una
+de ellas.
 
 \section{Métricas} \label{sec:metrics}
 
 \indent Determinar métricas de error es fundamental a la hora de evaluar cuáles son los próximos pasos a seguir. \\
-\indent Hay que tener en cuenta que en algunas aplicaciones es prácticamente imposible obtener un error nulo. El
-error de Bayes define el mínimo error que se puede esperar alcanzar, aún obteniendo una cantidad infinita de datos y
+\indent Hay que tener en cuenta que en algunas aplicaciones es prácticamente imposible obtener un error nulo.
+El error de Bayes define el mínimo error que se puede esperar alcanzar, aún obteniendo una cantidad infinita de datos y
 recuperando la verdadera función de distribución. Este se debe a que los atributos pueden no contener toda la
 información que se necesita para explicar la variable de salida o porque el sistema a analizar puede ser
 intrínsecamente estocástico. En la práctica uno siempre va a estar limitad por una cantidad finita de datos. \\
-\indent La cantidad de datos puede estar limitada por varios motivos. Por ejemplo, cuando el objetivo es construir
-un producto o servicio comercializable, uno puede siempre conseguir más datos pero es necesario evaluar cuál es el
-costo del mismo comparado a tratar de reducir el error. La recolección de datos implica tiempo, dinero y esfuerzo
-humano. Un ejemplo típico del esfuerzo humano, cuando se necesita conseguir datos de un paciente clínico por medio
-de técnicas invasivas. En el ámbito académico o de investigación, cuando el objetivo es responder una pregunta
-científica sobre qué algoritmo tiene mejor rendimiento en base a un estándar (\textit{benchmark}), no es posible
-agregar más datos. \\
+\indent La cantidad de datos puede estar limitada por varios motivos.
+Por ejemplo, cuando el objetivo es construir un producto o servicio comercializable, uno puede siempre conseguir más
+datos pero es necesario evaluar cuál es el costo del mismo comparado a tratar de reducir el error. La recolección de
+datos implica tiempo, dinero y esfuerzo humano.
+Un ejemplo típico del esfuerzo humano, cuando se necesita conseguir datos de un paciente clínico por medio
+de técnicas invasivas.
+En el ámbito académico o de investigación, cuando el objetivo es responder una pregunta científica sobre qué
+algoritmo tiene mejor rendimiento en base a un estándar (\textit{benchmark}), no es posible agregar más datos. \\
 \indent En muchas aplicaciones la exactitud (\textit{accuracy}) alcanza para definir el rendimiento de los
-algoritmos. Sin embargo, en muchas ocasiones esto no es así. Es el ejemplo de la detección de una rara enfermedad,
-en la que una persona en un millón padecen esta enfermedad. Por ende, una forma fácil de alcanzar $99.9999\%$ de
-exactitud es simplemente diciéndole al equipo que reporte que en todos los casos la enfermedad se encuentra ausente.
+algoritmos.
+Sin embargo, en muchas ocasiones esto no es así.
+Es el ejemplo de la detección de una rara enfermedad, en la que una persona en un millón padecen esta enfermedad.
+Por ende, una forma fácil de alcanzar $99.9999\%$ de exactitud es simplemente diciéndole al equipo que reporte que en
+todos los casos la enfermedad se encuentra ausente.
 Claramente, esta métrica no es útil y una forma de resolver esto es utilizando otras métricas como son la precisión
-y sensibilidad (\textit{recall}). La precisión se define como la cantidad de detecciones que el algoritmo definió
+y sensibilidad (\textit{recall}).
+La precisión se define como la cantidad de detecciones que el algoritmo definió
 como correctas y sensibilidad es la cantidad de eventos verdaderos que fueron detectados. Un detector que dice que
 nadie tiene esta enfermedad, tiene $100\%$ de precisión pero 0 sensibilidad. Un detector que dice que todos tienen
 la enfermedad, tiene $100\%$ de sensibilidad pero precisión igual a la cantidad de las personas que sí la tienen, $0

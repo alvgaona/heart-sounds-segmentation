@@ -37,35 +37,34 @@
 function PCGFeatures = getFeatures(audioData, Fs, downsample, featuresFs)
     if(nargin < 3)
         downsample = false;
-        figures = false;
-        featureFs = 0;
+        featuresFs = 0;
     end
     % Spike removal from the original paper:
-    audioData = schmidt_spike_removal(audioData,Fs);
+    audioData = spikeRemoval(audioData,Fs);
     % Find the homomorphic envelope
-    homomorphicEnvelope = Homomorphic_Envelope_with_Hilbert(audioData, Fs);
+    homomorphicEnvelope = homomorphicEnvelopeWithHilbert(audioData, Fs);
     % Normalise and downsampled (or not) the envelope:
     if downsample
         downsampledHomomorphicEnvelope = resample(homomorphicEnvelope,featuresFs,Fs);
-        normalisedHomomorphicEnvelope = normalise_signal(downsampledHomomorphicEnvelope);
+        normalisedHomomorphicEnvelope = normalizeSignal(downsampledHomomorphicEnvelope);
     else
-        normalisedHomomorphicEnvelope = normalise_signal(homomorphicEnvelope);
+        normalisedHomomorphicEnvelope = normalizeSignal(homomorphicEnvelope);
     end
     %% Hilbert envelope
-    hilbertEnvelope = Hilbert_Envelope(audioData, Fs);
+    hilbertEnv = hilbertEnvelope(audioData, Fs);
     if downsample
-        downsampledHilbertEnvelope = resample(hilbertEnvelope, featuresFs, Fs);
-        normalisedHilbertEnvelope = normalise_signal(downsampledHilbertEnvelope);
+        downsampledHilbertEnvelope = resample(hilbertEnv, featuresFs, Fs);
+        normalisedHilbertEnvelope = normalizeSignal(downsampledHilbertEnvelope);
     else
-        normalisedHilbertEnvelope = normalise_signal(hilbertEnvelope);
+        normalisedHilbertEnvelope = normalizeSignal(hilbertEnv);
     end
     %% PSD
-    psd = get_PSD_feature_Springer_HMM(audioData, Fs, 40,60)';   
+    psd = getPSDFeatureSpringerHMM(audioData, Fs, 40,60)';   
     if downsample
        downsampledPsd = resample(psd, length(downsampledHomomorphicEnvelope), length(psd));
-       normalisedPsd = normalise_signal(downsampledPsd);
+       normalisedPsd = normalizeSignal(downsampledPsd);
     else
-       normalisedPsd = normalise_signal(psd);
+       normalisedPsd = normalizeSignal(psd);
     end
     normalisedPsd = resample(psd, length(normalisedHomomorphicEnvelope), length(psd));
     %% Wavelet
@@ -80,9 +79,9 @@ function PCGFeatures = getFeatures(audioData, Fs, downsample, featuresFs)
     wavFeature = wavFeature(1:length(homomorphicEnvelope));
     if downsample
         downsampledWavelet = resample(wavFeature, featuresFs, Fs);
-        normalisedWavelet =  normalise_signal(downsampledWavelet)';
+        normalisedWavelet =  normalizeSignal(downsampledWavelet)';
     else
-        normalisedWavelet =  normalise_signal(wavFeature)';
+        normalisedWavelet =  normalizeSignal(wavFeature)';
     end
     PCGFeatures = [normalisedHomomorphicEnvelope, normalisedHilbertEnvelope, normalisedPsd, normalisedWavelet];
 end

@@ -1,0 +1,38 @@
+@startuml
+(*) --> ===B1===
+===B1=== --> "Adquisición del PCG"
+===B1=== --> "Adquisición del ECG"
+
+"Adquisición del PCG" --> "Filtro pasa-bajos" as lp
+lp --> "Filtro pasa-altos" as hp
+
+"Adquisición del ECG" --> "Detección de la onda R y el fin de la onda T" as RT
+
+hp --> "Filtro de picos y media móvil" as spikeMean
+
+spikeMean --> ===B2===
+RT --> ===B2===
+
+===B2=== --> if "Entrenamiento o evaluación" then
+  -->[Entrenamiento] ===B3===
+else
+-->[Evaluación] "Framing" as fr2
+endif
+
+===B3=== --> "Hiperparámetros" as hyperparameters
+===B3=== --> "Framing" as fr1
+===B3=== --> "Extracción del envelograma homomórfico" as henv
+
+hyperparameters --> "Entrenamiento de la red LSTM" as train
+fr1 --> train
+
+henv --> "Etiquetamiento del PCG" as labeling
+
+labeling --> train
+
+fr2 --> "Extracción de Atributos" as ae2
+ae2 --> "Clasificación (Modelo LSTM entrenado)" as tm
+
+train --> (*)
+tm --> (*)
+@enduml
