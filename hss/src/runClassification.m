@@ -1,15 +1,8 @@
 function [net, predTrain, predTest] = runClassification(frames, fsstTrain, fsstTest)
         layers = [ ...
         sequenceInputLayer(44)
-        bilstmLayer(200,'OutputMode','sequence')
-        fullyConnectedLayer(100)
-        dropoutLayer(0.2)
-        bilstmLayer(100,'OutputMode','sequence')
-        fullyConnectedLayer(50)
-        dropoutLayer(0.2)
-        bilstmLayer(50,'OutputMode','sequence')
+        lstmLayer(200,'OutputMode','sequence')
         fullyConnectedLayer(4)
-        dropoutLayer(0.5)
         softmaxLayer
         classificationLayer];
 
