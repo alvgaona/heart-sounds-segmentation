@@ -24,6 +24,8 @@
 
 \usepackage{lmodern}
 
+
+
 \begin{document}
   \sloppy
   \hbadness=99999
@@ -31,22 +33,28 @@
   \setcounter{page}{1}
   \setcounter{section}{0}
 
-  % Sections
-  \input{sections/cover.tex}
-  \input{sections/summary.tex}
+  \input{covers/cover-en.tex}
   \afterpage{\null\newpage}
+  \selectlanguage{spanish}
+  \input{covers/cover-es.tex}
+  \selectlanguage{english}
+  \input{abstracts/abstract.tex}
+  \afterpage{\null\newpage}
+  \selectlanguage{spanish}
+  \input{abstracts/resumen.tex}
   \tableofcontents
   \printglossary[type=\acronymtype,title=Acrónimos,toctitle=Acrónimos]
   \afterpage{\null\newpage}
-  \input{sections/chapter-01/chapter-01.tex}
-  \input{sections/chapter-02/chapter-02.tex}
-  \input{sections/chapter-03/chapter-03.tex}
-  \input{sections/chapter-04/chapter-04.tex}
-  \input{sections/chapter-05/chapter-05.tex}
-  \input{sections/chapter-06/chapter-06.tex}
-  \input{sections/chapter-07/chapter-07.tex}
-  \input{sections/chapter-08/chapter-08.tex}
-  \input{sections/chapter-09/chapter-09.tex}
+  % Chapters
+  \input{chapters/chapter-01/chapter-01.tex}
+  \input{chapters/chapter-02/chapter-02.tex}
+  \input{chapters/chapter-03/chapter-03.tex}
+  \input{chapters/chapter-04/chapter-04.tex}
+  \input{chapters/chapter-05/chapter-05.tex}
+  \input{chapters/chapter-06/chapter-06.tex}
+  \input{chapters/chapter-07/chapter-07.tex}
+  \input{chapters/chapter-08/chapter-08.tex}
+  \input{chapters/chapter-09/chapter-09.tex}
   \afterpage{\null\newpage}
   \listoffigures
   \listoftables
