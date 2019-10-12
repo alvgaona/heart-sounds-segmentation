@@ -3,30 +3,33 @@
 \section{Acondicionamiento de la señal}
 
 Las señales biológicas, como tantas otras, presentan contaminación en el momento de la adquisición. Éstas fuentes de
-ruido, ya las mencionamos antes, provienen de ruidos respiratorios, intestinales, habla, entre otras. Por varios
-motivos es recomendable realizar un pre-procesamiento de ellas para que los algoritmos que buscan características
-específicas de la señal en cuestión no "se confunda". Por ejemplo, los algoritmos de delineado de \acrshort{ecg},
+ruido, provienen de ruidos respiratorios, intestinales, habla, entre otras.
+Por varios motivos es recomendable realizar un pre-procesamiento de ellas para que los algoritmos que buscan
+características específicas de la señal en cuestión no "se confundan".
+Por ejemplo, los algoritmos de delineado de \acrshort{ecg},
 donde ubican las ondas fundamentales (P, Q, R, S, T$_{on}$, T, T$_{off}$) mejor se desempeñan cuanto más limpia o
 clara es la señal. \\
 \indent Un fonocardiograma presenta frecuencias entre $25-250$ Hz. Esto se debe a los sonidos fundamentales de la
 señal, S$_1$ y S$_2$. El contenido espectral de S$_1$ se encuentra entre $10-180$ Hz, mientras que S$_2$ entre
 $50-250$ Hz. En el primer caso, la mayor energía espectral se encuentra en componentes por debajo de los 130 Hz. Por
-supuesto, que la presencia de otras frecuencias que no son intrínsecas al fonocardiograma pueden estar relacionado a
+supuesto, que la presencia de otras frecuencias que no son intrínsecas al fonocardiograma pueden estar relacionada a
 enfermedades de insuficiencia cardíaca como contaminación del entorno. \\
 \indent Para realizar el filtrado se utilizaron dos filtros lineales e invariantes en el tiempo de respuesta
-infinita al impulso. Un Butterworth pasa-altos y pasa-bajos. Las características de estos filtros se detallan más
-adelante. Esta etapa es importante dado a que elimina ruido de contenido alto en frecuencias, que se observa un
-"pasto" sobre la señal, y también remueve contenido de baja frecuencia que genera lo que se conoce como línea de
-base móvil (\textit{baseline wandering}), causado por contenido de baja frecuencia como la respiración. Lo que
-ocurre es que la línea isoeléctrica (\textit{baseline}) se encuentra desnivelada. Por otro lado, se remueve el valor
-medio (\textit{offset}). A pesar del filtrado, algunas señales contienen ruido de baja frecuencia que no es posible
-eliminar con filtros lineales, de esta forma, se aplica el algoritmo de media móvil (\textit{moving average}) con
-una ventana de largo determinado heurísticamente para suavizar los picos. También se aplica un algoritmo de
-eliminación de picos de los fonocardiogramas. Finalmente, se termina normalizando las señales para que contengan
-energía unitaria. \\
-\indent A continuación se observan las especificaciones de los filtros. En la Figura \ref{fig:high-pass} y
-\ref{fig:low-pass} se ilustran las magnitudes de los filtros y las fases, y en la Figura \ref{fig:high-pass-tb} y
-\ref{fig:low-pass-tb} las bandas de transición.
+infinita al impulso.
+Un Butterworth pasa-altos y pasa-bajos. Las características de estos filtros se detallan más adelante.
+Esta etapa es importante dado que elimina ruido de altas frecuencias, que se observa un "pasto" sobre la señal,
+y también remueve contenido de baja frecuencia que genera lo que se conoce como línea de base móvil
+(\textit{baseline wandering}), causado por contenido de baja frecuencia como la respiración.
+Lo que ocurre es que la línea isoeléctrica (\textit{baseline}) se encuentra desnivelada.
+Por otro lado, se remueve el valor medio (\textit{offset}).
+A pesar del filtrado, algunas señales contienen ruido de baja frecuencia que no es posible eliminar con filtros
+lineales, de esta forma, se aplica el algoritmo de media móvil (\textit{moving average}) con una ventana de largo
+determinado heurísticamente para suavizar los picos.
+También se aplica un algoritmo de eliminación de picos de los fonocardiogramas.
+Finalmente, se termina normalizando las señales para que contengan energía unitaria. \\
+\indent A continuación se observan las especificaciones de los filtros.
+En la Figura \ref{fig:high-pass} y \ref{fig:low-pass} se ilustran las magnitudes de los filtros y las fases,
+y en la Figura \ref{fig:high-pass-tb} y \ref{fig:low-pass-tb} las bandas de transición.
 
 \begin{table}[H]
   \centering
@@ -38,7 +41,6 @@ energía unitaria. \\
     \hline
     \thead{Pasa-bajos} & \thead{4} & \thead{0.01} & \thead{0.01} & \thead{400 Hz} & \thead{467 Hz} & \thead{345 Hz} \\
     \hline
-
   \end{tabularx}
 
   \caption[Tabla de especificaciones de los filtros]{Tabla de especificaciones de los filtros. A$_+$ es la atenuación
@@ -112,7 +114,8 @@ vector contiene los valores máximos de las ventanas, denominados \textit{Maximu
 \end{align}
 
 \indent Las componentes $m_i$ dinámicamente irán cambiando de valor hasta que ninguna de ellas sea superior a 3
-veces la mediana de $\bm{m}$. Esta es la condición donde el algoritmo reconstruye la señal filtrada. \bigskip
+veces la mediana de $\bm{m}$ \cite{pp:schmidt2010}.
+Esta es la condición donde el algoritmo reconstruye la señal filtrada. \bigskip
 
 \indent Hasta que no se cumpla la condición antes mencionada, se busca entre las ventanas la que contenga el mayor
 pico.
@@ -134,7 +137,7 @@ computar el comienzo y el fin del pico para eliminarlo. Para ello se necesitan c
   s_i = sgn(w_i)
 \end{align}
 
-\indent Donde $s_i$ son las componentes del vector que $\mathbf{s}_i \in \mathbb{R}^L$. Luego, se computan los
+\indent Donde $s_i$ son las componentes del vector que $\mathbf{s} \in \mathbb{R}^L$. Luego, se computan los
 cruces por cero, $\mathbf{z} \in \mathbb{R}^{L-1}$ en la ecuación \ref{eq:zero-crossings}
 
 \begin{align} \label{eq:zero-crossings}
@@ -142,8 +145,8 @@ z_i = s_i - s_{i-1}, \quad 0 \leq i \leq L-2
 \end{align}
 
 \indent A partir de este momento sólo queda definir el inicio y el fin del pico. El inicio del pico se encuentra a
-partir del último cruce por cero hasta la posición $i_{spike}$. El final del pico, se encuentra con el primero cruce
-por cero despuées de $i_{spike}$. Las ecuaciones \ref{eq:spike-start} y \ref{eq:spike-end} reflejan el cálculo.
+partir del último cruce por cero hasta la posición $i_{spike}$. El final del pico, se encuentra con el primer cruce
+por cero después de $i_{spike}$. Las ecuaciones \ref{eq:spike-start} y \ref{eq:spike-end} reflejan el cálculo.
 
 \begin{align} \label{eq:spike-start}
 p = \mathrm{max}\big\{n \in \mathbb{N}_0 \; | \; n \leq i_{spike}-1\big\}
@@ -160,7 +163,7 @@ con el primer índice de la ventana y el último respectivamente. Luego, simplem
   w_{i,j} = \epsilon, \quad p \leq j \leq q
 \end{align}
 
-\indent Siendo $\epsilon$ un número tan chico como sea defina. Por último, queda por recalcular el vector
+\indent Siendo $\epsilon$ un número tan chico como se defina. Por último, queda por recalcular el vector
 $\mathbf{m}$ con $\mathbf{w}_i$ actualizado. \bigskip
 
 \indent Cuando se cumpla la condición de 3 veces la mediana de $\mathbf{m}$, se concatenan todas las ventanas y se
@@ -200,15 +203,20 @@ fitting} utilizado en \cite{ref:illanes-zhang} y el delineador de onditas. Ahora
 onda T se utilizó el algoritmo conocido como \textit{ecgpuwave} (basado en la detección previa del complejo QRS), un
 método basado en maximizar el área de una ventana móvil entre sucesivas ondas R \cite{ref:zhang}, el delineador de
 onditas y un algoritmo hecho por Vazquez-Seisdedos et al. \cite{ref:seisdedos}. Para decir que los detectores son
-consistentes entre si las anotaciones no deben estar más alejadas que 100 ms.
+consistentes entre si las anotaciones no deben estar más alejadas que 100 ms \cite{pp:springer2015}.
 
 \begin{figure}[H]
   \centering
   \includegraphics[scale=0.8]{sections/chapter-04/images/detector-agreement.png}
-  \caption[Ejemplo de las anotaciones de una señal de \acrshort{ecg} con ruido. La posición de las anotaciones
-  para cada uno de los detectores se muestran]{Ejemplo de las anotaciones de una señal de \acrshort{ecg} con ruido
-  . La posición de las anotaciones para cada uno de los detectores se muestran. Imagen extraída de
-  \cite{pp:springer2015}.}
+  \caption[
+    Ejemplo de las anotaciones de una señal de \acrshort{ecg} con ruido.
+    La posición de las anotaciones para cada uno de los detectores se muestran
+  ]
+  {
+    Ejemplo de las anotaciones de una señal de \acrshort{ecg} con ruido.
+    La posición de las anotaciones para cada uno de los detectores se muestran.
+    Imagen extraída de\cite{pp:springer2015}.
+  }
   \label{fig:detector-agreement}
 \end{figure}
 
@@ -220,12 +228,13 @@ automática generalmente utilizadas en el entrenamiento del modelo propuesto. Es
 modelo. \\
 \indent El etiquetamiento, como se ha explicado en el Sección \ref{sec:annotations}, consiste en estimar los tiempos
 de duración de los sonidos. Sin embargo, para el conjunto de datos de este trabajo, las estimaciones de Schmidt
-\textit{et. al} no dieron buenos resultados, dado a que en el momento del etiquetamiento los estados no quedaban
-bien definidos. Para ello, se modificaron las medias a ($122 \pm 22$) ms y ($152 \pm 22$) ms. Es necesario mencionar
-que el algoritmo propuesto por Springer \textit{et. al} sea, tal vez, el responsable de la necesidad de adaptar los
-parámetros de manera ad hoc. \\
+\textit{et. al} no dieron buenos resultados, dado que en el momento del etiquetamiento los estados no quedaban
+bien definidos. Para ello, se modificaron las medias y desvíos de la duración de los sonidos fundamentales
+a ($122 \pm 22$) ms y ($152 \pm 22$) ms.
+Es necesario mencionar que el algoritmo propuesto por Springer \textit{et. al} sea, tal vez, el responsable de
+la necesidad de adaptar los parámetros de manera ad hoc. \\
 \indent En la Figura \ref{fig:pcg-labeling} se observa una porción de una señal de \acrshort{pcg} donde, en base a
-las marcas proveídas por la base de datos, se realiza el etiquetado de los estados de la señal [sístole (S$_1$),
+las marcas provistas por la base de datos, se realiza el etiquetado de los estados de la señal [sístole (S$_1$),
 sístole isovolumético, diástole (S$_2$), diástole isovolumétrico].
 
 \begin{figure}[H]
@@ -243,9 +252,8 @@ sístole isovolumético, diástole (S$_2$), diástole isovolumétrico].
 del electrocardiograma asociadas $\bm{r}_i \in \mathbb{R}^{M_i}$, $\mathbf{t}_i \in \mathbb{R}^{M_i}$. Se definen
 las medias y desvíos de los sonidos, ($\mu_{S_1}, \sigma_{S_1}$) y ($\mu_{S_2}, \sigma_{S_2}$). \bigskip
 
-\indent Se define $\mathbf{s}_i \in \mathbb{R}^{N_i}$ al vector de estados de la señal. Recordar que este vector
-sólo puede tomar 4 valores, $\mathbf{s}_i \in [1,4]$. \\
-\indent A partir de aquí se mencionara el algoritmo para etiquetar cada uno de los cuatro estados.
+\indent Se define $\mathbf{s}_i \in \{1,2,3,4\}^{N_i}$ al vector de estados de la señal.
+A partir de aquí se mencionara el algoritmo para etiquetar cada uno de los cuatro estados.
 
 \subsubsection*{Primer sonido (Estado \#1)}
 
@@ -344,7 +352,7 @@ el vector $\mathbf{d}_i \in \mathbb{R}^M$, donde sus componentes son $d_{j,i}$, 
 
 \subsubsection*{Inicio y fin de la señal}
 
-\indent Dado a que todos los estados derivan de la posición de la onda R y del fin de la onda T, el primer estado en
+\indent dado que todos los estados derivan de la posición de la onda R y del fin de la onda T, el primer estado en
 la señal siempre será 1 o 3. Por lo tanto, hasta ese estado, debe ser 2 o 4 respectivamente.
 
 \indent Tanto para el inicio como el fin de la señal es necesario obtener desde izquierda a derecha la posición del
