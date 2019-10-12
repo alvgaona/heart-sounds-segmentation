@@ -4,7 +4,7 @@ La selección de datos para la implementación del segmentador se extrajo de \te
 por \textit{National Institute of General Medical Sciences} (\acrshort{nigms}) y \textit{National Institute of
 Biomedical Imaging and Bioengineering} (\acrshort{nibib}). Esta organización se dedica a ofrecer, de manera
 gratuita, acceso a un gran cantidad de señales fisiológicas y herramientas para el procesamiento de las mismas. \\
-\indent Particularmente, se extrajeron dos base de datos. Una asociada a a un desafío público en el año 2016 que se
+\indent Particularmente, se extrajeron dos base de datos. Una asociada a un desafío público en el año 2016 que se
 denominaba ``\textit{Classification of Normal/Abnormal Heart Sound Recordings: the PhysioNet/Computing in Cardiology
 Challenge 2016}``, el cual consistía en diseñar e implementar un clasificador de fonocardiogramas normales y
 anormales bajo ciertas condiciones. En el Cuadro \ref{tab:challenge2016} se mencionan las características generales
@@ -15,7 +15,7 @@ de la base de datos.
   \begin{tabular}{ |c|c|c|c|c|c|c| }
     \hline
     \thead{Set} & \thead{Cantidad \\ de archivos} & \thead{Normal} & \thead{Anormal} & \thead{Duración \\
-    promedio [s]} & \thead{Máx. \\ dureación [s]} & \thead{Mín. \\ duración [s]} \\
+    promedio [s]} & \thead{Máx. \\ duración [s]} & \thead{Mín. \\ duración [s]} \\
     \hline
     \thead{training-a} & \thead{409} & \thead{117} & \thead{292} & \thead{32.56} & \thead{36.5} & \thead{9.27} \\
     \thead{training-b} & \thead{490} & \thead{386} & \thead{104} & \thead{7.98} & \thead{8} & \thead{5.31} \\
@@ -39,9 +39,9 @@ extraídos de pacientes sanos y los anormales de pacientes con problemas cardía
 enfermedades cardíacas que no se encuentran detalladas en cada uno de los pacientes. Sin embargo, las enfermedades
 cardíacas típicas son deficiencias valvulares y enfermedades asociadas a las coronarias. Las deficiencias valvulares
 incluyen prolapso de la válvula mitral, regurgitación mitral, estenosis aórtica y cirugías valvulares. Todos los
-pacientes sanos y patológicos incluyen adultos y niños, y cada uno de éstos pueden aportar de uno a seis grabaciones
-. Adicionalmente, cada una de las grabaciones fue muestreada a 2000 Hz y una única derivación del fonocardiograma. \\
-\indent Es importante tener en cuenta, dado a que las grabaciones fueron hechas en ambientes no controlados, muchas
+pacientes sanos y patológicos incluyen adultos y niños, y cada uno de éstos pueden aportar de uno a seis grabaciones.
+Adicionalmente, cada una de las grabaciones fue muestreada a 2000 Hz y una única derivación del fonocardiograma. \\
+\indent Es importante tener en cuenta, dado que las grabaciones fueron hechas en ambientes no controlados, muchas
 de éstas se encuentan contaminadas por diferentes fuentes de ruido, como el habla, movimiento del estetoscopio,
 respiración y ruidos intestinales. \\
 \indent La segunda base de datos ha sido publicada por David Springer a partir del trabajo en \cite{pp:springer2015}
@@ -58,10 +58,10 @@ patológica.
 
 \section{Selección y normalización de datos} \label{sec:data-selection-normalization}
 
-Ya vimos que estas base de datos contienen datos que difieren entre si. Desde la cantidad de señales hasta los tipos
+Ya vimos que estas bases de datos contienen datos que difieren entre si. Desde la cantidad de señales hasta los tipos
 de datos (\acrshort{ecg}, anotaciones del \acrshort{ecg}, frecuencia de muestreo). \\
 \indent Dicho esto es necesario decidir por una base de datos en una primera instancia. Para ponerlo en términos
-cuantitativos, por qué la elección de una base respecto de la otra, se menciona lo siguiente. La frecuencia de
+cuantitativos se menciona el por qué de la elección de una base respecto de la otra. La frecuencia de
 muestreo no es un problema, por lo tanto tanto 1 KHz como 2 KHz es más que suficiente para tener una buena
 resolución en tiempo. Ambas bases clasifican las señales respecto a si son patológicas o no patológicas, es decir,
 que es posible realizar algún tipo de entrenamiento para la clasificación de éstas, aunque no es el alcance de este
@@ -71,12 +71,13 @@ se debe a las anotaciones del electocardiograma. La base de datos de Springer \c
 contiene marcas extraídas automáticamente y filtradas por un algoritmo de concordancia. De lo contrario, en la base
 de datos del desafío se proveen los \acrshort{ecg}, a los cuales es necesario extraerles las marcas correspondientes.
 Debido a que el alcance del trabajo es implementar un segmentador de PCG y no un extractor de anotaciones, se optó
-por utilizar la base de David Springer dado a que permite apoyarse sobre trabajos previos que ya han utilizado
+por utilizar la base de David Springer dado que permite apoyarse sobre trabajos previos que ya han utilizado
 dichos datos, confiando en la naturaleza de estos datos y así realizar una mejor comparación en el Capítulo
-\ref{ch:results}. Asimismo, se referirá a la base seleccionada como \textit{base de datos} para evitar confusión. \\
+\ref{ch:results}.
+Asimismo, se referirá a la base seleccionada como \textit{base de datos} para evitar confusión. \\
 \indent Los datos de la base de datos se encuentran en formato \texttt{.mat} (formato propietario de
 \textsc{MATLAB\texttrademark}) y las anotaciones de las ondas R y fin de la T, se encuentran muestreadas a 50 Hz.
-Esto requiere de estandarizar el formato de los datos y acomodar la frecuencia de las anotaciones dado a que las
+Esto requiere estandarizar el formato de los datos y acomodar la frecuencia de las anotaciones dado que las
 señales se encuentran a una frecuencia de muestreo mayor. Para ello, se tomó como estándar el formato
 \acrshort{wfdb} (\textit{Waveform Database}), el cual contiene dos categorías estándar, \textit{MIT Format} y
 \textit{EDF Format}.
@@ -97,19 +98,14 @@ señales se encuentran a una frecuencia de muestreo mayor. Para ello, se tomó c
 
 \subsection*{EDF Format}
 \begin{itemize}
-  \item Los archivos \href{http://www.edfplus.info/specs/edf.html}{\underline{EDF}} contienen señales digitalizadas
-  \item almacenadads en formato internacional. Estos archivos guardan la información de encabezado al comienzo del
-  \item archivo, a diferencia del formato MIT. A su vez pueden estar acompañados de archivos con anotaciones.
-  \item Por ejemplo, si existe un archivo \texttt{*.edf}, un archivo con anotaciones asociado podría ser
-  \item \texttt{*.edf.qrs}, donde \texttt{.qrs} es la extensión de las anotaciones en este caso (podría ser otro).
-  \item Los archivos
-  \href{http://www.edfplus.info/specs/edfplus.html}{\underline{EDF+}} son archivos EDF que contienen anotaciones
-  \item codificadas como señales.
+  \item Los archivos \href{http://www.edfplus.info/specs/edf.html}{\underline{EDF}} contienen señales digitalizadas almacenadas en formato internacional. Estos archivos guardan la información de encabezado al comienzo del archivo, a diferencia del formato MIT. A su vez pueden estar acompañados de archivos con anotaciones.
+  \item Por ejemplo, si existe un archivo \texttt{*.edf}, un archivo con anotaciones asociado podría ser \texttt{*.edf.qrs}, donde \texttt{.qrs} es la extensión de las anotaciones en este caso (podría ser otro).
+  \item Los archivos \href{http://www.edfplus.info/specs/edfplus.html}{\underline{EDF+}} son archivos EDF que contienen anotaciones codificadas como señales.
 \end{itemize}
 
-\indent La categoría utilizada en este trabajo es \textit{MIT Format}. Este formato debe ser leído con una librería
+\indent La categoría utilizada en este trabajo es \textit{MIT Format}. Este formato debe ser leído con una libreria
 especializada. \textit{WFDB Software Package} es un conjunto de funciones para escribir y leer en formatos
-específicos de \textit{PhysioBank databases} (entre otros). La librería \textit{WFDB} es \textit{LGPLed}, y puede
+específicos de \textit{PhysioBank databases} (entre otros). La libreria \textit{WFDB} es \textit{LGPLed}, y puede
 ser usada para programas escritos en \textit{ANSI/ISO C}, \textit{K\&R C}, \textit{C++}, o \textit{Fortran},
 corriendo bajo sistemas operativos para los cuales el compilador \textit{ANSI/ISO} or \textit{K\&R C} se encuentre
 disponible, incluyendo todas las versiones Unix, MS-DOS, MS-Windows, the Macintosh OS, y VMS. Opcionalmente, la

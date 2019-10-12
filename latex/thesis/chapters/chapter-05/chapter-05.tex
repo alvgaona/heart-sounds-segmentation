@@ -15,7 +15,7 @@ todos los atributos de la señal son aptos para el tipo de estimación que se de
 longitud de la entrada sea conocida, fija e igual que la salida del bloque de clasificación o segmentación y la
 segunda implica sólo tener una etiqueta de lo que la entrada representa. Los casos que se manejan en este trabajo
 son las técnicas de clasificación de señales sanas y patológicas. El caso más sencillo las etiquetas son dos: 1)
-sano, 2) patológico y las técnicas de segmentación en las cuales se basa el el presente trabajo, donde se quiere
+sano, 2) patológico y las técnicas de segmentación en las cuales se basa el presente trabajo, donde se quiere
 etiquetar o segmentar la secuencia de entrada (esto significa ponerle un valor a cada muestra de la secuencia en el
 tiempo).
 
@@ -24,7 +24,7 @@ tiempo).
 \indent Una importante etapa en el proceso comienza con la extracción de atributos propuestos por David Springer
 \textit{et al.} \cite{pp:springer2015} A continuación se listan algunos atributos: \\
 \indent 1) Envelograma homomórfico (\textit{homomorphic envelogram}): Este procedimiento es muy similar a la
-modulación AM. Ésta técnica ha sido usada por numerosos investigadores para la extracción de envolventes del
+modulación AM. Esta técnica ha sido usada por numerosos investigadores para la extracción de envolventes del
 \acrshort{pcg} \cite{ref:gupta}, \cite{ref:gill-gavrieli-intrator}, incluido el algoritmo de segmentación
 \cite{pp:schmidt2010}. El envelograma homomórfico es derivado de aplicarle el logaritmo natural a la señal en
 cuestión $x(n)$. Esta señal se la modela como la multiplicación de una señal de baja frecuencia envolvente y una
@@ -54,93 +54,23 @@ Donde el operador $\mathcal{H}$ es el filtro pasa-bajos.
   a(n) &= \exp(\ln(a(n)))
 \end{align*}
 
-\indent 2) Envolvente de Hilbert (\textit{Hilbert envelope}): dada una función analítica $g(t)$.
-
-\begin{equation}
-  g(t)=\sin(\omega t)\sin(\Omega t)
-\end{equation}
-
-donde $\omega > \Omega$, la envolvente es posible construirla a partir del valor absoluto de la función analítica
-$\mathscr{A}(g(t))$. $\mathscr{A}$ se compone de la señal original $g(t)$ y su transformada de Hilbert $\Tilde{g}(t)
-$ de la siguiente manera:
-
-\begin{equation}
-  \mathcal{T}(g(t))=g(t) + i\Tilde{g}(t)
-\end{equation}
-
-1. Lo primero es construir la transformada de Hilbert.
-
-\begin{equation} \label{eq:hilbert_transform}
-\Tilde{g}(t)=-\int_{-\infty}^{\infty} [a(f)\sin(ft) - b(f)\cos(ft)]df
-\end{equation}
-
-\begin{equation}
-a(f)=\frac{1}{\pi}\int_{-\infty}^{\infty} g(t)\cos(ft)]dt
-\end{equation}
-
-\begin{equation}
-b(f)=\frac{1}{\pi}\int_{-\infty}^{\infty} g(t)\sin(ft)]dt
-\end{equation}
-
-2. Empezar por construir $a(f)$.
-
-\begin{align*}
-a(f) &= \int_{-\infty}^{\infty} \sin(\omega t)\sin(\Omega t)\cos(ft)]dt \\
-\quad &= \frac{1}{2}\int_{-\infty}^{\infty} [\cos(\omega-\Omega)t - \cos(\omega+\Omega)t]\cos(ft)]dt \\
-\quad &= \frac{1}{2}[\delta(f-\omega+\Omega)-\delta(\delta(f-\omega-\Omega)]
-\end{align*}
-
-3. Luego por $b(f)$.
-
-\begin{align*}
-b(f) &= \int_{-\infty}^{\infty} \sin(\omega t)\sin(\Omega t)\sin(ft)]dt
-\end{align*}
-
-Usando las identidades trigonométricas
-
-\begin{align*}
-\sin(\alpha)\sin(\beta)=\frac{1}{2}[\cos(\alpha-\beta)-\cos(\alpha+\beta)] \\
-\cos(\alpha)\sin(\beta)=\frac{1}{2}[\sin(\alpha-\beta)+\sin(\alpha+\beta)]
-\end{align*}
-
-Entonces
-
-\begin{align*}
-b(f) = 0
-\end{align*}
-
-4. Así substituyendo $a(f)$ y $b(f)$ en \ref{eq:hilbert_transform}.
-
-\begin{equation}
-\Tilde{g}(t)=-\sin(\Omega t)\cos(\omega t)
-\end{equation}
-
-5. Obtener el valor absoluto de $\mathscr{A}(g(t))$.
-
-\begin{equation}
-\mathcal{T}(g(t))=\sin(\Omega t)\sin(\omega t)-i\sin(\Omega t)\cos(\omega t)
-\end{equation}
-
-\begin{align*}
-|\mathcal{T}| &= \sqrt{\mathcal{T}\mathcal{T}*} = |\sin(\Omega t)|
-\end{align*}
-
-Messer et al. \cite{ref:messer} y Kumar et al. \cite{ref:kumar} calcularon la envolvente del \acrshort{pcg} usando
-la transformada de Hilbert. La transformada de Hilbert extrae la función analítica que excluye las frecuencias
-negativas de la señal original y su envolvente se obtiene calculando el módulo. \\
+\indent 2) Envolvente de Hilbert (\textit{Hilbert envelope}): Messer et al. \cite{ref:messer} y
+Kumar et al. \cite{ref:kumar} calcularon la envolvente del \acrshort{pcg} usando la transformada de Hilbert.
+La transformada de Hilbert extrae la función analítica que excluye las frecuencias negativas de la señal original
+y su envolvente se obtiene calculando el módulo. \\
 \indent 2) Envolvente de onditas (\textit{wavelet envelope}): el análisis de onditas ha sido ampliamente explorado.
 Sin embargo, hay discusiones sobre cuál familia es la óptima para el filtrado, clasificación y segmentación del
 \acrshort{pcg}. Algunos investigadores determinan que la familia Morlet es la que mejor concuerda en el análisis de
-fonocardiogramas \cite{ref:oskiper-watrous}, \cite{ref:ergen-tatar-gulcur}. Otros destacan la familia de Daubechies
-\cite{ref:liang-sakari-iiro}, \cite{ref:gupta}. En este caso se ha utilizado la \acrshort{dwt} con distintas
-familias y niveles (la familia de Morlet no ha sido utilizada dado a que \acrshort{dwt} no es compatible con esta
-familia). \\
+fonocardiogramas \cite{ref:oskiper-watrous,ref:ergen-tatar-gulcur}.
+Otros destacan la familia de Daubechies \cite{ref:liang-sakari-iiro,ref:gupta}.
+En este caso se ha utilizado la \acrshort{dwt} con distintas familias y niveles (la familia de Morlet no ha sido
+utilizada dado que \acrshort{dwt} no es compatible con esta familia). \\
 \indent 3) Envolvente de densidad espectral de potencia (\textit{power spectral density envelope}): la mayoría del
 contenido espectral de S$_1$ y S$_2$ se encuentra por debajo de 150 Hz con un pico en 50 Hz. Basado en estas
-frecuencias, se extrae este atributo a partir entre 40 Hz y 60 Hz, en ventanas con 50\% de solapamiento y ancho de 0
-.05 s. La PSD fue calculada utilizando ventaneo de Hamming y transformada de Fourier. \\
-\indent Cada uno de los 4 atributos extraídos se los normaliza en varianza y media. Luego, se realiza un submuestreo
-a 50 Hz por motivos computacionales.
+frecuencias, se extrae este atributo entre 40 Hz y 60 Hz, en ventanas con 50\% de solapamiento y ancho de 0.05 s.
+La PSD fue calculada utilizando ventaneo de Hamming y transformada de Fourier. \\
+\indent Cada uno de los 4 atributos extraídos se los normaliza en varianza y media.
+Luego, se realiza un submuestreo a 50 Hz por motivos computacionales.
 
 \subsection*{Transformada sincronizada de Fourier}
 
@@ -153,7 +83,7 @@ una especie de líneas en los planos de \acrshort{tf} (tiempo-frecuencia) o \acr
 alrededor de crestas que corresponden a la frecuencia instantánea de los modos que hacen a la señal. \\
 \indent La \acrshort{sst} (Tranformada sincronizada), introducida en \cite{ref:daubechies-maes}, es una suerte de
 reasignación al método que trata de ajustar la representación TS manteniendo la invertibilidad. Esta técnica se
-desarrollo en el contexto de la \acrshort{cwt} pero sin ningún tipo de avances en el campo de la \acrshort{stft}.
+desarrolló en el contexto de la \acrshort{cwt} pero sin ningún tipo de avances en el campo de la \acrshort{stft}.
 
 \subsection*{Transformada de tiempo corto de Fourier y señales multicomponentes}
 
@@ -182,7 +112,7 @@ señal $f$. \\
 aproximación alrededor de un tiempo fijo $t_0$, lo cual equivale a aproximar $f$ por funciones puras.
 
 \begin{equation}
-  f(t) \approx \sum_{k=1}^K A_k(t_0) e^{2i\phi[\phi_k(t_0)+\phi_k^{'}(t_0)(t-t_0)]}
+  f(t) \approx \sum_{k=1}^K A_k(t_0) e^{2i\pi[\phi_k(t_0)+\phi_k^{'}(t_0)(t-t_0)]}
 \end{equation}
 
 \indent La correspondiente \acrshort{stft} aproximada se escribe (cambiando $t_0$ por un $t$ genérico).
@@ -203,7 +133,7 @@ multicomponentes en el plano TF, y una descomposición que permite separar y dem
 
 \subsubsection*{Motivación-definición}
 
-\indent A partir de la \acrshort{stft} $V_f$, la \acrshort{fsst} mueve los coeficientes $V_f(\eta,t)$ según a la
+\indent A partir de la \acrshort{stft} $V_f$, la \acrshort{fsst} mueve los coeficientes $V_f(\eta,t)$ según la
 transformación $(\eta,t) \rightarrow (\hat{\omega}_f(\eta,t),t)$ donde $\hat{\omega}_f$ es la \textit{frecuencia
 instantánea} definida por:
 

@@ -1,3 +1,5 @@
+\usepackage{amsfonts}
+
 \chapter{Implementación} \label{ch:results}
 
 \indent Este capítulo tiene como objetivo mostrar y reflejar el trabajo hecho. El preprocesamiento y el
@@ -46,7 +48,7 @@ dependiendo de $N$ y de $\tau$, se define si existe solapamiento u \textit{overl
   O =
   \begin{cases}
     1, \; 0 \leq \tau \leq N \\
-    0, \; \tau \geq N
+    0, \; \tau > N
   \end{cases}
 \end{align}
 
@@ -54,9 +56,9 @@ dependiendo de $N$ y de $\tau$, se define si existe solapamiento u \textit{overl
 
 \begin{align}
   \bm{\Tilde{x}}_k = \left[\begin{array}{cccc}
-    \bm{x}_{\tau \cdot k} &
-    \bm{x}_{\tau \cdot k+1} &
-    \dots & \bm{x}_{\tau \cdot k + N - 1}
+    x_{\tau \cdot k} &
+    x_{\tau \cdot k+1} &
+    \dots & x_{\tau \cdot k + N - 1}
   \end{array}\right]^\top
 \end{align}
 
@@ -69,9 +71,9 @@ dependiendo de $N$ y de $\tau$, se define si existe solapamiento u \textit{overl
   \end{array}\right]^\top
 \end{align}
 
-\indent Donde $k = 1,2,...,Q$. Por último, una vez obtenidos los $Q$ cuadros para una señal $j$, donde $j = 1,2,...,
-D$ y $D$ la cantidad total de señales, se itera sobre todo el set de datos y se genera la matriz $\bm{H} \in
-\mathbb{R}^{M \times N}$.
+\indent Donde $k = 1,2,...,Q$ y $\bm{X}_j \in \mathbb{R}^{N \times Q}$ Por último, una vez obtenidos los $Q$
+cuadros para una señal $j$, donde $j = 1,2,...,D$ y $D$ la cantidad total de señales, se itera sobre todo el conjunto
+de datos y se genera la matriz $\bm{H} \in \mathbb{R}^{N \times Q \times D}$.
 
 \begin{align}
   \bm{H} = \left[\begin{array}{cccc}
@@ -88,7 +90,7 @@ D$ y $D$ la cantidad total de señales, se itera sobre todo el set de datos y se
 \section{Extracción de atributos}
 
 \indent Una vez hecho el acondicionamiento de la señal (filtrado, normalización en términos de energía) y los
-cuadros listos, se procede a extraer los features necesarios a introducir al clasificador. Los features extraídos
+cuadros listos, se procede a extraer los features necesarios a introducir al clasificador. Los atributos extraídos
 son obtenidos por medio de la \acrshort{fsst}, el clasificador es una red diseñada con celdas \acrshort{lstm}. \bigskip
 
 \indent Para la extracción de features en tiempo-frecuencia se utilizó la \acrshort{fsst}. Esta se aplica sobre
@@ -97,7 +99,7 @@ segmentos de señal extraídos del proceso de encuadrado. \\
 posee información única a excepción de una muestra. Previamente, se eligen las señales mayores o iguales a una
 longitud $N$, cuyo valor va a ser el largo de cada segmento. \\
 \indent A cada segmento se le aplica la transformada con una ventana definida. La ventana elegida es la ventana de
-Kaiser con una longitud $L = 128$ y un $\beta = 0.5$. Esta ventana fue seleccionada dado a que su objetivo es
+Kaiser con una longitud $L = 128$ y un $\beta = 0.5$. Esta ventana fue seleccionada dado que su objetivo es
 maximizar la relación de energía entre lóbulo principal y sus lóbulos secundarios, reduciendo los efectos del ruido
 en esas bandas de frecuencia y mejorando la calidad de la transformada.
 
@@ -123,7 +125,7 @@ en esas bandas de frecuencia y mejorando la calidad de la transformada.
   \beta = \begin{cases}
     0.1102(\alpha-8.7), \; \alpha > 50 \\
     0.5842(\alpha-21)^{0.4}+0.7886(\alpha-21), \; 50 \geq \alpha \geq 21, \\
-    0, \; \alpha \geq < 21
+    0, \; \alpha > 21
   \end{cases}
 \end{align}
 
@@ -135,9 +137,9 @@ Y la banda de transición, según el largo de la ventana, se calcula despejando 
 \end{align}
 
 \indent En la Figura \ref{fig:pcg-fsst} se ilustra la transformada extraída de una señal de fonocardiograma. Se
-visualiza claramente el contenido frecuencia en los distintos sonidos del fonocardiograma y la periodicidad de los
+visualiza claramente el contenido frecuencial en los distintos sonidos del fonocardiograma y la periodicidad de los
 mismos. Por otro lado, se muestra que por debajo de frecuencias de los 20 Hz y por encima de los 200 Hz no hay
-contenido espectral relevante en cuanto a energía. La mayor cantidad de contenido frecuencia se encuentra entre
+contenido espectral relevante en cuanto a energía. La mayor cantidad de contenido frecuencial se encuentra en
 dicho rango. Por ende, se extraen los features entre 20-200 Hz como entrada al clasificador.
 
 \begin{figure}[H]
@@ -161,15 +163,14 @@ dicho rango. Por ende, se extraen los features entre 20-200 Hz como entrada al c
 \end{figure}
 
 \indent Se ve claramente como la mayor energía frecuencial corresponde a los instantes donde se producen los sonidos
-fundamentales. También, en este ejemplo, hay energía proveniente de otras fuentes de ruido, entre los instantes 1-1
-.2 segundos.
+fundamentales.
+También, en este ejemplo, hay energía proveniente de otras fuentes de ruido, entre los instantes $1-1.2$ s.
 
 \subsection{Modelo} \label{subsec:model}
 
 \indent El clasificador es una red neuronal \acrshort{lstm} como se ha mencionado anteriormente. Los parámetros a
-estimar del modelo pertenecen a la capa \acrshort{lstm}. Por otro lado, es predefinir los hiperparámetros de la red
-neuronal. Además de la capa recurrente, a una red neuronal la componen otras capas intermedias y una capa de entrada
-y salida.
+estimar del modelo pertenecen a la capa \acrshort{lstm}.
+Además de la capa recurrente, a una red neuronal la componen otras capas intermedias y una capa de entrada y salida.
 
 \subsubsection{Arquitectura}
 
@@ -190,7 +191,7 @@ y salida.
 algoritmo publicado en 2014 en la \acrshort{iclr} 2015, denominado \textit{Adam} \cite{pp:adam}. El algoritmo
 introduce ciertos hiperparámetros además de los convencionales que es necesario definir a priori. \\*
 \indent Los hiperparámetros utilizados en la implementación se listan a continuación \footnote{Los nombres de los
-hiperparámetros se encuentran en inglés, dado a que no hay literatura en español y muchos de ellos no tienen
+hiperparámetros se encuentran en inglés, dado que no hay literatura en español y muchos de ellos no tienen
 traducción}.
 
 \begin{itemize}
@@ -213,7 +214,7 @@ cantidad de \textit{epochs} en el valor estándar. Por otro lado, bastante ligad
 el tamaño del lote se definió por motivos computacionales, tiempo y desempeño de la red por medio de distintas
 iteraciones. \\
 \indent Otros parámetros de interés, son \textit{InitialLearnRate}, \textit{LearnRateDropPeriod} y
-\textit{LearnRateDropFactor}. Éstos son necesarios dado a que el \textit{LearnRate} se modifica a lo largo de las
+\textit{LearnRateDropFactor}. Éstos son necesarios dado que el \textit{LearnRate} se modifica a lo largo de las
 iteraciones, y con estos parámetros se define cada cuánto y por cuánto se reduce el mismo. En esta implementación se
 definió que cada 3 \textit{epochs} se reduce un 1\%. \\
 \indent Lo que se conoce como \textit{Regularization} intenta resolver el problema de generalización o
@@ -265,13 +266,15 @@ cercano a 1 funciona mejor. Queda definir el parámetro $\alpha$ como el \textit
 que este parámetro tome diferentes valores para distintas capas intermedias y depende del algoritmo en cuestión. Es
 por eso que no se puede definir un valor estándar de este hiperparámetro. \bigskip
 
-\indent Por último, queda definir el hiperparámetro \textit{GradientThreshold}. Este umbral intenta acortar el
-gradiente si los valores lo exceden. El método se basa en utilizar la norma L2 tal que si la norma del gradiente
-excede el umbral, se escala el gradiente tal que su norma lo igual. En este caso el umbral toma el valor de 1.
+\indent Por último, queda definir el hiperparámetro \textit{GradientThreshold}.
+Este umbral intenta acortar el gradiente si los valores lo exceden.
+El método se basa en utilizar la norma L2 tal que si la norma del gradiente
+excede el umbral, se escala el gradiente.
+En este caso el umbral toma el valor de 1.
 
 \subsection{K-Folds} \label{subsec:k-folds}
 
-\indent Recoradar que la técnica utilizada para resolver el problema de generalidad en el momento del entrenamiento
+\indent Recordar que la técnica utilizada para resolver el problema de generalidad en el momento del entrenamiento
 es la ya mencionada en el Capítulo \ref{ch:deep-learning}, validación cruzada (particularmente
 \textit{10-Folds}). Para separar los fonocardiogramas en distintos grupos, se define el siguiente algoritmo. \bigskip
 
@@ -292,7 +295,7 @@ el valor $L$, por lo tanto $i = 0,1,2,\dots,L-1$. \bigskip
 \end{align}
 
 \indent Con $i=0,1,2,\dots,M-1$ y $n = 0,1,2,\dots,K-1$. De esta manera se define la matriz $\bm{F} \in
-\mathbb{R}^{K \times M}$, que contiene los indices correspondientes a cada \textit{fold}.
+\mathbb{R}^{K \times M}$, que contiene los índices correspondientes a cada \textit{fold}.
 
 \begin{align}
   \bm{F} = \left[\begin{array}{ccccc}
@@ -327,20 +330,22 @@ $\mathbf{E}_p \in \mathbb{R}^M$. Ambos asociados a un grupo $P \in \{0,1,2,\dots
 \end{align}
 
 \indent De esta manera, quedan definidos los grupos para realizar los K entrenamientos y ponderar métricas de
-performance.
+desempeño.
 
 \section{Clasificación}
 
 \indent La clasificación se realiza a partir de las probabilidades de la matriz $\bm{B} \in \mathbb{R}^{n \times 4}$.
-Esta matriz es la que la capa de salida genera. En ella la se encuentra la probabilidad de que cada muestra de la
+Esta matriz es la que la capa de salida genera. En ella se encuentra la probabilidad de que cada muestra de la
 señal pertenezca a alguna clase. La forma de elegir la clase se muestra en la ecuación \ref{eq:class-definition}.
 Esto es lo que generalmente la mayoría de las redes neuronales a su salida realizan como forma de clasificación, es
-el caso de la segmentación mediante la una adaptación de la red neuronal \textit{U-Net} de Renna \textit{et al.}
+el caso de la segmentación mediante la adaptación de la red neuronal \textit{U-Net} de Renna \textit{et al.}
 \cite{pp:renna2018}.
 
 \begin{align} \label{eq:class-definition}
 C_i = \arg \underset{j}{\mathrm{max}} \; B_{i,j}
 \end{align}
+
+\indent Sea $B_{i,j} \in \mathbb{R}^{N \times 4}$ la matriz de probabilidades de la red neuronal.
 
 
 \indent Es necesario mencionar que en el entrenamiento de la red neuronal no se ha impuesto ninguna restricción de
