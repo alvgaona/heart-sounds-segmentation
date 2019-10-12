@@ -22,7 +22,7 @@ the gradient}), permite obtener una minimización local de un criterio cuadráti
 $\mathbf{w} = (w_{j,1}, ..., w_{j,d})$, completado por un sesgo $b_j$ y asociado a una función de activación $\phi$.
 
 \begin{align}
-  y_j = f_j(x) = \phi(<w_j,x>) + b_j
+  y_j = f_j(x) = \phi(<w_j,x> + b_j)
 \end{align}
 
 \subsection*{Funciones de activación}
@@ -65,14 +65,14 @@ $\mathbf{w} = (w_{j,1}, ..., w_{j,d})$, completado por un sesgo $b_j$ y asociado
 \end{figure}
 
 \indent Históricamente, la función sigmoidea fue mayormente utilizada ya que es diferenciable y permite mantener los
-valores entre [0,1]. Sin embargo, es problemática ya que su gradiente es muy cercano a cero cuando $|x|$ no es se
+valores entre [0,1]. Sin embargo, es problemática ya que su gradiente es muy cercano a cero cuando $|x|$ no se
 encuentra cerca de 0.
 
 \begin{figure}[H]
   \centering
   \includegraphics[scale=0.3]{sections/chapter-06/images/sigmoid.png}
-  \caption[Función de activación sigmoidea.]{Función de activación sigmoidea. El línea sólida se muestra la función
-  de activación y su derivada en línea punteada.}
+  \caption[Función de activación sigmoidea.]{Función de activación sigmoidea.
+  La línea sólida se muestra la función de activación y su derivada en línea punteada.}
   \label{fig:relu}
 \end{figure}
 
@@ -84,12 +84,12 @@ por la función \acrshort{relu} (\textit{Rectified Linear Unit}).
 \begin{figure}[H]
   \centering
   \includegraphics[scale=0.3]{sections/chapter-06/images/ReLU.png}
-  \caption[Función de activación \acrshort{relu}.]{Función de activación \acrshort{relu}. El línea sólida se muestra
+  \caption[Función de activación \acrshort{relu}.]{Función de activación \acrshort{relu}. La línea sólida se muestra
   la función de activación y su derivada en línea punteada.}
   \label{fig:sigmoid}
 \end{figure}
 
-\indent Esta función no es diferenciable en cero, pero en la práctica esto no es un problema dado a que la
+\indent Esta función no es diferenciable en cero, pero en la práctica esto no es un problema dado que la
 probabilidad de que una entrada sea igual a cero es casi nula. La función \acrshort{relu} también tiene la propiedad
 de dispersión (\textit{sparcification}). Ella y su derivada son 0 para valores negativos, y no es posible obtener
 información en estos casos, pero eso es recomendable agregar un pequeño sesgo para asegurar de que cada unidadad se
@@ -152,7 +152,7 @@ probabilidades, la suma de todas éstas deben sumar 1. \\
 \end{enumerate}
 
 \indent Donde $\phi$ es la función de activación de las capas intermedias y $\psi$ la función de activación de la
-capa de salida, este caso la función \textit{softmax}. La matriz $\bm{W}^{(k)}$ tiene dimensiones  M $\times$ N,
+capa de salida, en este caso la función \textit{softmax}. La matriz $\bm{W}^{(k)}$ tiene dimensiones  M $\times$ N,
 donde M corresponde a la cantidad de neuronas en la capa $k$ y N a la cantidad de neuronas en la capa $k-1$.
 
 \subsection*{Estimación de parámetros}
@@ -235,7 +235,7 @@ gradient descent}). \\
 \indent Una técnica que hoy en día se utiliza en su mayoría para mitigar el problema de la generalización de estos
 métodos es la técnica de abandono (\textit{drop-out}). Consiste en definir una probabilidad $p$, la cual resulta en
 otro hiperparámetro, algunas unidades de la red se fijan a 0. Tradicionalmente se utiliza 0.5 para las capas
-intermedias y 0.2 para la capa de entrada. Computacionalmente este método no es costoso dado a que es cambiar los
+intermedias y 0.2 para la capa de entrada. Computacionalmente este método no es costoso dado que es cambiar los
 pesos de algunas unidades a 0.
 
 % \section{Redes neuronales convolucionales}
@@ -445,18 +445,14 @@ la enfermedad, tiene $100\%$ de sensibilidad pero precisión igual a la cantidad
 .0001\%$ en este ejemplo. En muchas aplicaciones, es bueno resumir esta información en una sola métrica. Esta
 métrica se conoce como métrica F$_1$.
 
-\begin{align}
-  F_1 = 2\frac{PR}{P+R}
-\end{align}
-
 \indent Otra opción es reportar el área bajo la curva P-R, donde en el eje de abscisas se encuentra R y en el eje de
 ordenadas, P. \\
 \indent Muchas otras métricas son posibles. En distintas aplicaciones especializadas, existen métricas
 característica de ese campo. \\
 \indent Una manera de mostrar rendimiento de un algoritmo de estimación, es por medio de la matriz de confusión.
 Esta matriz representa en sus columnas las clases verdaderas y las filas contienen a las clases estimadas. Esta
-matriz resume distintas métricas, de las cuales es posible obtener resultados. Estas métricas se especifican a
-continuación.
+matriz resume distintas métricas, de las cuales es posible obtener resultados. Estas métricas se especifican en función
+de los falsos positivos (FP), falsos negativos (FN), verdaderos positivos (TP) y verdaderos negativos (TN).
 
 \begin{itemize}
   \item Sensibilidad
@@ -515,5 +511,4 @@ Los motivos de esta decisión es la naturaleza de la aplicación y por comparaci
 publicados. \\
 \indent \acrshort{tp} define a los verdaderos positivos y \acrshort{tn} a los verdaderos negativos. En base a estos
 dos parámetros se pueden calcular todas las métricas mencionadas. Por otro lado, cabe destacar que dependiendo de la
-cantidad de clases que el problema posea, es necesario computar \acrshort{tp} y \acrshort{tn} para cada una de ellas
-. Más adelante, se dará un ejemplo en el caso de 4 clases.
+cantidad de clases que el problema posea, es necesario computar \acrshort{tp} y \acrshort{tn} para cada una de ellas.
