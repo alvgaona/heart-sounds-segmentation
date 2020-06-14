@@ -2,7 +2,7 @@ close all
 clc
 
 %% Dataset configuration and set up
-cd('datasets/david_springer')
+cd('datasets')
 load('springer_dataset.mat')
 
 Fs = 1000; % Hz

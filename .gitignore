@@ -1,19 +1,8 @@
-datasets/
-.DS_Store
+# JetBrains
 .idea/
-img/
 
-## LaTeX
-out/
-*.acn
-*.aux
-*.glo
-*.ist
-*.lof
-*.log
-*.lot
-*.out
-*.pdf
-*.bbl
-*.blg
-*.toc
+# Visual Studio Code
+.vscode/
+
+# macOS
+.DS_Store
