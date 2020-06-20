@@ -8,8 +8,9 @@ function data = seperateTrainAndTestData(signals, labels, features, signalLen, v
         validationPercentage = 0;
         testPercentage = 0.3; 
     end
-
-    rng('shuffle')
+    
+    % Change rng to 'shuffle' if you must not generated the same sets.
+    rng('default')
     [trainInd, valInd,testInd] = dividerand(length(signals), ...
         trainPercentage, ...
         validationPercentage, ...
