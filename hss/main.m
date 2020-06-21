@@ -11,8 +11,8 @@ frames = framing(data,2000,1000);
 
 net = train(frames, fsstTrain, fsstVal, frames.framedLabelsVal);
 
-[predTrain, trainScores] = classify(net,fsstTrain,'MiniBatchSize',20);
-[predTest, testScores] = classify(net,fsstTest,'MiniBatchSize',20);
+[predTrain, trainScores] = classify(net,fsstTrain,'MiniBatchSize',50);
+[predTest, testScores] = classify(net,fsstTest,'MiniBatchSize',50);
 
 %% Confusion Matrix
 figure
