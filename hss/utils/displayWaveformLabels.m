@@ -28,8 +28,8 @@
 % OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 % SOFTWARE.
 
-function displayWaveformLabels(y, c)
-    x = 1:length(y);
+function displayWaveformLabels(y, c, fs)
+    x = (1/fs)*(1:length(y));
     custom_colormap = [
                         .8500 .3250 .0980; ... % red
                         1     .5    0; ... % orange
