@@ -44,7 +44,7 @@ function groups = kFolds(dataset, labels, k)
     end
   end
   groups = {};
-  logical_array = logical(zeros(1,k));
+  logical_array = false(1,k);
   logical_array(2:k) = 1;
   for i=1:k
     test = [ folds{logical_array == 0,1}' folds{logical_array == 0,2}' ];
@@ -53,7 +53,8 @@ function groups = kFolds(dataset, labels, k)
               reshape([ train_folds{:,2} ], [size([ train_folds{:,2} ],1)*size([ train_folds{:,2} ],2),1]) ];
     groups{i,1} = struct();
     groups{i,1}.train = train;
-    groups{i,1}.test = test;
+    groups{i,1}.validation = [ test(round(length(test)*0.1):end,1) test(round(length(test)*0.1):end,2) ];
+    groups{i,1}.test = [ test(1:end-round(length(test)*0.1)-1,1) test(1:end-round(length(test)*0.1)-1,2) ];
     logical_array = circshift(logical_array,1);
   end
 end
