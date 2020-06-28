@@ -86,7 +86,7 @@ classdef Metrics < matlab.mixin.SetGet
   end
 
   methods
-    function obj = ClassMetrics(confusionMatrix,description)
+    function obj = Metrics(confusionMatrix,description)
        obj.confusionMatrix = confusionMatrix;
        obj.description = description;
     end
