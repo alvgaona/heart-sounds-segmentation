@@ -1,27 +1,35 @@
 clear
 close all
 
+signalLen = 2000;
+
 [signals, labels, features] = loadInputData();
+lengthSignals = cellfun(@(x) length(x), signals);
+signals = signals(lengthSignals >= signalLen);
+labels = labels(lengthSignals >= signalLen);
 
-data = seperateTrainAndTestData(signals, labels, features, 2000, 1);
+[framedSignals, framedLabels] = frameSignals(signals, labels, 1000, 2000);
 
-frames = framing(data,2000,1000);
+groups = kFolds(framedSignals', framedLabels', 10);
 
-[fsstTrain, fsstVal, fsstTest] = extractFeatures(frames, 1000);
+[fsstTrain, fsstVal, fsstTest] = extractFeatures(groups{6}, 1000);
 
-net = train(frames, fsstTrain, fsstVal, frames.framedLabelsVal);
+trainLabels = groups{6}.train(:,2);
+testLabels = groups{6}.test(:,2);
+
+net = train(groups{6}.train(:,2), fsstTrain, fsstVal, groups{6}.validation(:,2));
 
 [predTrain, trainScores] = classify(net,fsstTrain,'MiniBatchSize',50);
 [predTest, testScores] = classify(net,fsstTest,'MiniBatchSize',50);
 
 %% Confusion Matrix
 figure
-confusionchart([frames.framedLabelsTrain{:}],[predTrain{:}],'RowSummary','row-normalized','ColumnSummary','column-normalized','Title','Training');
+confusionchart([trainLabels{:}],[predTrain{:}],'RowSummary','row-normalized','ColumnSummary','column-normalized','Title','Training');
 figure
-confusionchart([frames.framedLabelsTest{:}],[predTest{:}],'RowSummary','row-normalized','ColumnSummary','column-normalized','Title','Testing');
+confusionchart([testLabels{:}],[predTest{:}],'RowSummary','row-normalized','ColumnSummary','column-normalized','Title','Testing');
 
 %% ROC Curves
-labels = [frames.framedLabelsTest{:}];
+labels = [testLabels{:}];
 scores = [testScores{:}];
 multiClassRocCurve(labels, scores, {'S1','Systole','S2','Diastole'});
 

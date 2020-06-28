@@ -1,4 +1,4 @@
-function data = seperateTrainAndTestData(signals, labels, features, signalLen, validationData)   
+function data = seperateTrainAndTestData(signals, labels, signalLen, validationData)   
     if (validationData)
         trainPercentage = 0.7;
         validationPercentage = 0.1;
@@ -9,8 +9,7 @@ function data = seperateTrainAndTestData(signals, labels, features, signalLen, v
         testPercentage = 0.3; 
     end
     
-    % Change rng to 'shuffle' if you must not generated the same sets.
-    rng('default')
+    rng('shuffle')
     [trainInd, valInd,testInd] = dividerand(length(signals), ...
         trainPercentage, ...
         validationPercentage, ...
@@ -18,15 +17,12 @@ function data = seperateTrainAndTestData(signals, labels, features, signalLen, v
 
     signalsTrain = signals(trainInd);
     labelsTrain = labels(trainInd);
-    featuresTrain = features(trainInd);
     
     signalsVal = signals(valInd);
     labelsVal = labels(valInd);
-    featuresVal = features(valInd);
 
     signalsTest = signals(testInd);
     labelsTest = labels(testInd);
-    featuresTest = features(testInd);
 
     lengthSignalsTrain = cellfun(@(x) length(x), signalsTrain);
     lengthSignalsTest = cellfun(@(x) length(x), signalsTest);
@@ -38,7 +34,4 @@ function data = seperateTrainAndTestData(signals, labels, features, signalLen, v
     data.labelsTest = labelsTest(lengthSignalsTest >= signalLen);
     data.signalsVal = signalsVal(lengthSignalsVal >= signalLen);
     data.labelsVal = labelsVal(lengthSignalsVal >= signalLen);
-    data.featuresTrain = featuresTrain(lengthSignalsTrain >= signalLen);
-    data.featuresTest = featuresTest(lengthSignalsTest >= signalLen); 
-    data.featuresVal = featuresVal(lengthSignalsVal >= signalLen);
 end
