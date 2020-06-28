@@ -32,6 +32,3 @@ confusionchart([testLabels{:}],[predTest{:}],'RowSummary','row-normalized','Colu
 labels = [testLabels{:}];
 scores = [testScores{:}];
 multiClassRocCurve(labels, scores, {'S1','Systole','S2','Diastole'});
-
-
-
