@@ -12,12 +12,12 @@ labels = labels(lengthSignals >= signalLen);
 
 groups = kFolds(framedSignals', framedLabels', 10);
 
-[fsstTrain, fsstVal, fsstTest] = extractFeatures(groups{6}, 1000);
+[fsstTrain, fsstVal, fsstTest] = extractFeatures(groups{1}, 1000);
 
-trainLabels = groups{6}.train(:,2);
-testLabels = groups{6}.test(:,2);
+trainLabels = groups{1}.train(:,2);
+testLabels = groups{1}.test(:,2);
 
-net = train(groups{6}.train(:,2), fsstTrain, fsstVal, groups{6}.validation(:,2));
+[net, info] = train(groups{1}.train(:,2), fsstTrain, fsstVal, groups{1}.validation(:,2));
 
 [predTrain, trainScores] = classify(net,fsstTrain,'MiniBatchSize',50);
 [predTest, testScores] = classify(net,fsstTest,'MiniBatchSize',50);

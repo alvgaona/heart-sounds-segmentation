@@ -4,6 +4,10 @@ Bachelor thesis from University of Buenos Aires.
 
 **Thesis tutors**: Dr. Eng. Pedro David Arini and Dr. Eng. Maria Paula Bonomini. 
 
+## Requirements
+
+- MATLAB R2019b or newer
+
 ## Datasets
 
 The dataset used in this project is the one provided by [David Springer].
@@ -27,7 +31,6 @@ It contains the following fields.
 - `binary_diagnosis`: 0 if it's normal or 1 if it's abnormal.
 - `patient_number`: patient number associated with audio data by position in the array.
 - `features`: Hilbert envelope, Homomorphic envelope, DWT envelope, PSD envelope.
-
 
 [David Springer]: https://github.com/davidspringer
 [Labeling algorithm]: https://github.com/davidspringer/Springer-Segmentation-Code/blob/master/labelPCGStates.m

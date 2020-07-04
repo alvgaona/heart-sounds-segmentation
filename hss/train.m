@@ -1,9 +1,11 @@
-function net = train(ytrain, Xtrain, Xval, labelsVal)
+function [net, info] = train(ytrain, Xtrain, Xval, labelsVal)
     layers = [ ...
         sequenceInputLayer(44)
-        lstmLayer(200)
+        bilstmLayer(240, 'OutputMode', 'sequence')
+        reluLayer
         dropoutLayer(0.2)
-        lstmLayer(200)
+        bilstmLayer(240, 'OutputMode', 'sequence')
+        reluLayer
         dropoutLayer(0.2)
         fullyConnectedLayer(4)
         softmaxLayer
@@ -23,5 +25,5 @@ function net = train(ytrain, Xtrain, Xval, labelsVal)
         'Plots','training-progress',...
         'Verbose',1);
     
-    net = trainNetwork(Xtrain,ytrain,layers,options);
+    [net, info] = trainNetwork(Xtrain,ytrain,layers,options);
 end
