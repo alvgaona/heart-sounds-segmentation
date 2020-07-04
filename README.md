@@ -104,7 +104,7 @@ In this plot you can find the ROC curve for each class and the AUC scores are co
 
 ### Model
 
-The model has been saved for future use and can be used in [here][Network].
+The model has been saved for future use and can be found in [here][Network].
 
 ### Contributors
 
