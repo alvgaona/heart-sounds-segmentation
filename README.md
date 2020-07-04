@@ -1,8 +1,6 @@
 # Heart Sounds Segmentation
 
-Bachelor thesis from University of Buenos Aires.
-
-**Thesis tutors**: Dr. Eng. Pedro David Arini and Dr. Eng. Maria Paula Bonomini. 
+Bachelor thesis for Electronics Engineering at Faculty of Engineering, University of Buenos Aires.
 
 ## Requirements
 
@@ -107,6 +105,11 @@ In this plot you can find the ROC curve for each class and the AUC scores are co
 ### Model
 
 The model has been saved for future use and can be used in [here][Network].
+
+### Contributors
+
+- Advisor: Dr. Eng. Pedro David Arini
+- Student: Álvaro Joaquín Gaona
 
 [David Springer]: https://github.com/davidspringer
 [Labeling algorithm]: https://github.com/davidspringer/Springer-Segmentation-Code/blob/master/labelPCGStates.m
