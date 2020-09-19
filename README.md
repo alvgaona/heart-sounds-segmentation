@@ -35,10 +35,10 @@ It contains the following fields.
 _K-Fold Cross-validation_ has been used to obtain results. 
 Where `K = 10`.
 
-After that only one model is selected by taking into consideration the _Area Under the Curve_ (AUC) and
+After that, only one model is selected by taking into consideration the _Area Under the Curve_ (AUC) and
 metrics such as _Precision_, _Sensitivity_, _F1-score_ and _Accuracy_.
 
-Fold number 1 turend out to be the best one.
+Fold number 1 turned out to be the best one.
 Below you can see the _Receiver Operation Characteristic_ (ROC) curve and its confusion matrix.
 
 ### Training progress
