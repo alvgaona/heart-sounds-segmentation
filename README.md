@@ -43,7 +43,7 @@ Below you can see the _Receiver Operation Characteristic_ (ROC) curve and its co
 
 ### Training progress
 
-The training was performed with a validation set to control the losses.
+The training was performed on a validation set to control the losses.
 Preventing the model from overfitting.
 
 ![Training Progress]
