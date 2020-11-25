@@ -1,6 +1,6 @@
 # Heart Sounds Segmentation
 
-Graduate thesis for Electronics Engineering at Faculty of Engineering, University of Buenos Aires.
+Graduate thesis in Electronics Engineering at Faculty of Engineering, University of Buenos Aires.
 
 ## Requirements
 
