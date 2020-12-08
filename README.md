@@ -11,6 +11,10 @@ Graduate thesis in Electronics Engineering at Faculty of Engineering, University
 The dataset used in this project is the one provided by [David Springer].
 Additionally, it has automatically extracted labels using [Springer's labeling algorithm][Labeling algorithm].
 
+**Labelled PCG example**
+
+![Labelled PCG]
+
 The dataset can be downloaded from [here][Dataset] in MAT format.
 
 It contains the following fields.
@@ -29,6 +33,18 @@ It contains the following fields.
 - `binary_diagnosis`: 0 if it's normal or 1 if it's abnormal.
 - `patient_number`: patient number associated with audio data by position in the array.
 - `features`: Hilbert envelope, Homomorphic envelope, DWT envelope, PSD envelope.
+
+> Note: The features in the datasets are not used in this project except for the Hilbert Envelope.
+
+## Extracted features
+
+The features used in the training are instantaneous frequencies computed by the Fourier Synchrosqueezed Transform
+(FSST).
+Below you can see a 2D and 3D spectrogram using the FSST.
+
+![2D Specgram]
+
+![3D Specgram]
 
 ## Results
 
@@ -86,9 +102,7 @@ Below, the precision is computed for each class as well.
 
 ![Confusion Matrix]
 
-Off of the confusion matrix the accuracy can also be computed.
-
-- ACC = 93.29%   
+Off of the confusion matrix the accuracy can also be computed, yielding a 93.29%.
 
 ### ROC Curve
 
@@ -96,26 +110,35 @@ In this plot you can find the ROC curve for each class and the AUC scores are co
 
 ![ROC Curve]
 
-- AUC1: 0.984
-- AUC2: 0.992
-- AUC3: 0.994
-- AUC4: 0.992
-- Average: 0.991
+| Curve | AUC     |
+|-------|---------|
+| S1    | 0.984   |
+| Sys   | 0.992   |
+| S2    | 0.994   |
+| Dias  | 0.992   |
+|-------|-------- |
+| Average | 0.991 | 
 
 ### Model
 
-The model has been saved for future use and can be found in [here][Network].
+The model has been saved for future use and can be found in [here][Net Model].
 
 ### Contributors
 
-- Advisor: Dr. Eng. Pedro David Arini
+- Supervisor: Dr. Eng. Pedro David Arini
 - Student: Álvaro Joaquín Gaona
 
+<!-- External links -->
 [David Springer]: https://github.com/davidspringer
 [Labeling algorithm]: https://github.com/davidspringer/Springer-Segmentation-Code/blob/master/labelPCGStates.m
 [Dataset]: https://ag-datasets-89f203ac-44ed-4a06-9395-1e069e8e662d.s3-us-west-2.amazonaws.com/springer_dataset.mat
 
-[Confusion Matrix]: images/2020-06-29-T01-22-02/testing-cm-1.png 
-[Training Progress]: images/2020-06-29-T01-22-02/training-progress-1.png
-[ROC Curve]: images/2020-06-29-T01-22-02/roc-1.png
-[Network]: resources/models/net-1.mat
+<!-- Internal links -->
+[ROC Curve]: images/roc-1.png
+[2D Specgram]: images/specgram.png
+[3D Specgram]: images/specgram-3d.png
+[Labelled PCG]: images/labelled-pcg.png
+[Confusion Matrix]: images/testing-cm-1.png 
+[Training Progress]: images/training-progress-1.png
+
+[Net Model]: resources/models/net-1.mat
