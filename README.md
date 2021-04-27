@@ -123,6 +123,11 @@ In this plot you can find the ROC curve for each class and the AUC scores are co
 
 The model has been saved for future use and can be found in [here][Net Model].
 
+### Publication
+
+The paper has been published in the Elektron Journal at the University of Buenos Aires.
+Follow this [link][Article] to read more about it.
+
 ### Contributors
 
 - Supervisor: Dr. Eng. Pedro David Arini
@@ -132,6 +137,7 @@ The model has been saved for future use and can be found in [here][Net Model].
 [David Springer]: https://github.com/davidspringer
 [Labeling algorithm]: https://github.com/davidspringer/Springer-Segmentation-Code/blob/master/labelPCGStates.m
 [Dataset]: https://ag-datasets-89f203ac-44ed-4a06-9395-1e069e8e662d.s3-us-west-2.amazonaws.com/springer_dataset.mat
+[Article]: http://elektron.fi.uba.ar/index.php/elektron/article/view/101/212
 
 <!-- Internal links -->
 [ROC Curve]: images/roc-1.png
