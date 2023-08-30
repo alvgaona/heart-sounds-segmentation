@@ -1,4 +1,5 @@
 __pycache__/
+resources/data/
 
 # JetBrains
 .idea/
@@ -9,3 +10,9 @@ __pycache__/
 # macOS
 .DS_Store
 
+*.wav
+*.pkl
+*.csv
+*.zip
+*.hea
+*.dat
