@@ -4,11 +4,32 @@ import pandas as pd
 import torch
 import torchaudio
 
-from torch.utils.data import Dataset, DataLoader
+import pickle
+
+import torchvision.transforms
+from torch.utils.data import Dataset
 from torch.hub import download_url_to_file
 from torchaudio.datasets.utils import _extract_zip as extract_zip
 
 from hss.utils.files import walk_files
+
+
+def collate_fn(batch):
+    batch_size = len(batch)
+
+    if batch_size == 1:
+        return batch
+
+    tensors = [torch.reshape(t[0], (-1, 1)) for t in batch]
+    padded_tensors = torch.nn.utils.rnn.pad_sequence(tensors)
+
+    for i in range(0, batch_size):
+        batch[i] = list(batch[i])
+        batch[i][0] = torch.reshape(padded_tensors[:, i], (1, -1))
+        batch[i] = tuple(batch[i])
+
+    return batch
+
 
 class PhysionetChallenge2016(Dataset):
     """ Heart Sounds Dataset from PhysioNet Challenge 2016 """
@@ -16,14 +37,13 @@ class PhysionetChallenge2016(Dataset):
     _ext_reference = ".csv"
 
     def __init__(
-        self,
-        root: str,
-        url: str = "training",
-        train: bool = True,
-        folder_in_archive: str = "training",
-        download: bool = False,
-        transform = None,
-        ):
+            self,
+            root: str,
+            url: str = "training",
+            train: bool = True,
+            download: bool = False,
+            transform: torchvision.transforms.Compose = None,
+    ):
         """
         Instantiate HeartSoundsAudio object.
 
@@ -33,9 +53,9 @@ class PhysionetChallenge2016(Dataset):
             otherwise from test.pt
             download (bool):
         """
-        self._root = root
-        self._train = train
-        self._transform = transform
+        self.root = root
+        self.train = train
+        self.transform = transform
 
         if train is False:
             url = "validation"
@@ -69,8 +89,8 @@ class PhysionetChallenge2016(Dataset):
 
         path = os.path.dirname(file_id)
         df = pd.read_csv(
-          os.path.join(path, reference + self._ext_reference),
-          names=["ID", "Condition"]
+            os.path.join(path, reference + self._ext_reference),
+            names=["ID", "Condition"]
         )
 
         set_name = path.split("/")[-1]
@@ -82,7 +102,7 @@ class PhysionetChallenge2016(Dataset):
         file_audio = file_id + self._ext_audio
         output, sample_rate = torchaudio.load(file_audio)
 
-        output = self._transform(output[0])
+        output = self.transform(output[0])
 
         return (
             output,
@@ -92,35 +112,60 @@ class PhysionetChallenge2016(Dataset):
             basename
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._walker)
 
-    def collate_fn(self, batch):
-        batch_size = len(batch)
+    @staticmethod
+    def collate_fn(batch):
+        return collate_fn(batch)
 
-        if (batch_size == 1):
-            return batch
-
-        tensors = [torch.reshape(t[0], (-1, 1)) for t in batch]
-        padded_tensors = torch.nn.utils.rnn.pad_sequence(tensors)
-
-        for i in range(0, batch_size):
-            batch[i] = list(batch[i])
-            batch[i][0] = torch.reshape(padded_tensors[:, i], (1, -1))
-            batch[i] = tuple(batch[i])
-
-        return batch
-    
 
 class DavidSpringerHSS(Dataset):
-    def __init__(self, root: str) -> None:
-        self.root = root
-    
-    def __getitem__(self, index) -> Any:
-        return super().__getitem__(index)
 
-    def __len__(self):
-        pass
+    def __init__(
+            self,
+            dst: str,
+            download: bool = False,
+            transform: torchvision.transforms.Compose = None,
+            dtype: torch.dtype = torch.float64,
+    ) -> None:
+        self.dst = dst
+        self.transform = transform
+        self.dtype = dtype
 
-    def collate_fn(self, batch):
-        pass
+        url = "https://pub-db0cd070a4f94dabb9b58161850d4868.r2.dev/heart-sounds/springer_sounds.zip"
+        basename, archive_ext = os.path.basename(url).split('.')
+
+        if download:
+            if not os.path.isdir(f"{self.dst}/{basename}"):
+                if not os.path.isfile(basename + "." + archive_ext):
+                    download_url_to_file(url, f"{dst}/{basename}.{archive_ext}")
+                    extract_zip(os.path.join(f"{dst}/{basename}.{archive_ext}"), to_path=dst)
+                    os.remove(os.path.join(f"{dst}/{basename}.{archive_ext}"))
+
+        walker = walk_files(
+            self.dst, suffix=".pkl", prefix=True, remove_suffix=True
+        )
+        self.walker = list(walker)
+
+    def __getitem__(self, n) -> Any:
+        file_id = self.walker[n]
+
+        with open(file_id + ".pkl", "rb") as f:
+            x = pickle.load(f).flatten()
+
+        df = pd.read_csv(file_id + ".csv")
+
+        labels = torch.tensor(df.values.reshape(1, -1)[0], dtype=torch.int8)
+
+        return (
+            torch.tensor(x, dtype=self.dtype),
+            labels,
+        )
+
+    def __len__(self) -> int:
+        return len(self.walker)
+
+    @staticmethod
+    def collate_fn(batch):
+        return collate_fn(batch)
