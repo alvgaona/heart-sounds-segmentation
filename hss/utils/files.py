@@ -2,13 +2,14 @@ import os
 
 from typing import Union, Tuple, Iterable
 
+
 def walk_files(
-    root: str,
-    suffix: Union[str, Tuple[str]],
-    prefix: bool = False,
-    remove_suffix: bool = False
-  ) -> Iterable[str]:
-  """List recursively all files ending with a suffix at a given root
+        root: str,
+        suffix: Union[str, Tuple[str]],
+        prefix: bool = False,
+        remove_suffix: bool = False
+) -> Iterable[str]:
+    """List recursively all files ending with a suffix at a given root
   Args:
       root (str): Path to directory whose folders need to be listed
       suffix (str or tuple): Suffix of the files to match, e.g. '.png' or
@@ -22,22 +23,22 @@ def walk_files(
       as found (Default: ``False``).
   """
 
-  root = os.path.expanduser(root)
+    root = os.path.expanduser(root)
 
-  for dirpath, dirs, files in os.walk(root):
-      dirs.sort()
-      # `dirs` is the list used in os.walk function and by sorting it
-      # in-place here, we change the
-      # behavior of os.walk to traverse sub directory alphabetically
-      # see also
-      # https://stackoverflow.com/questions/6670029/can-i-force-python3s-os-walk-to-visit-directories-in-alphabetical-order-how#comment71993866_6670926
-      files.sort()
-      for f in files:
-          if f.endswith(suffix):
-              if remove_suffix:
-                  f = f[: -len(suffix)]
+    for dirpath, dirs, files in os.walk(root):
+        dirs.sort()
+        # `dirs` is the list used in os.walk function and by sorting it
+        # in-place here, we change the
+        # behavior of os.walk to traverse sub directory alphabetically
+        # see also
+        # https://stackoverflow.com/questions/6670029/can-i-force-python3s-os-walk-to-visit-directories-in-alphabetical-order-how#comment71993866_6670926
+        files.sort()
+        for f in files:
+            if f.endswith(suffix):
+                if remove_suffix:
+                    f = f[: -len(suffix)]
 
-              if prefix:
-                  f = os.path.join(dirpath, f)
+                if prefix:
+                    f = os.path.join(dirpath, f)
 
-              yield f
+                yield f
