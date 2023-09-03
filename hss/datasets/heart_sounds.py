@@ -1,16 +1,16 @@
 import os
-from typing import Any
+from typing import Any, Optional
+
+import numpy as np
 import pandas as pd
 import torch
 import torchaudio
-
-import pickle
-
 import torchvision.transforms
-from torch.utils.data import Dataset
 from torch.hub import download_url_to_file
+from torch.utils.data import Dataset
 from torchaudio.datasets.utils import _extract_zip as extract_zip
 
+from hss.transforms import Resample
 from hss.utils.files import walk_files
 
 
@@ -126,11 +126,13 @@ class DavidSpringerHSS(Dataset):
             self,
             dst: str,
             download: bool = False,
-            transform: torchvision.transforms.Compose = None,
+            transform: Optional[torchvision.transforms.Compose] = None,
+            labels_transform: Optional[torchvision.transforms.Compose] = None,
             dtype: torch.dtype = torch.float64,
     ) -> None:
         self.dst = dst
         self.transform = transform
+        self.labels_transform = labels_transform
         self.dtype = dtype
 
         url = "https://pub-db0cd070a4f94dabb9b58161850d4868.r2.dev/heart-sounds/springer_sounds.zip"
@@ -144,24 +146,26 @@ class DavidSpringerHSS(Dataset):
                     os.remove(os.path.join(f"{dst}/{basename}.{archive_ext}"))
 
         walker = walk_files(
-            self.dst, suffix=".pkl", prefix=True, remove_suffix=True
+            self.dst, suffix=".csv", prefix=True, remove_suffix=True
         )
         self.walker = list(walker)
 
     def __getitem__(self, n) -> Any:
         file_id = self.walker[n]
+        df = pd.read_csv(file_id + ".csv", skiprows=1, names=["signal", "labels"])
+        x = df.loc[:, "signal"].to_numpy()
+        y = df.loc[:, "labels"].to_numpy()
 
-        with open(file_id + ".pkl", "rb") as f:
-            x = pickle.load(f).flatten()
+        if self.transform is not None:
+            x = self.transform(x)
+            for t in self.transform.transforms:
+                # Looks for the first resample transform, if there's any
+                # to match the length of the new resampled signal.
+                if isinstance(t, Resample):
+                    y = torch.tensor(np.round(t(y)), dtype=torch.int8)
+                    break
 
-        df = pd.read_csv(file_id + ".csv")
-
-        labels = torch.tensor(df.values.reshape(1, -1)[0], dtype=torch.int8)
-
-        return (
-            torch.tensor(x, dtype=self.dtype),
-            labels,
-        )
+        return x, y
 
     def __len__(self) -> int:
         return len(self.walker)
