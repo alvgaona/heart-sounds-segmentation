@@ -1,6 +1,5 @@
 import os
-
-from typing import Union, Tuple, Iterable
+from typing import Iterable, Tuple, Union
 
 
 def walk_files(
