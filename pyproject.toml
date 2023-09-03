@@ -26,13 +26,55 @@ black = "^23.7.0"
 matplotlib = "^3.7.2"
 plotly = "^5.16.1"
 
-
 [tool.isort]
 profile = "hug"
 src_paths = "*"
 lines_after_imports = 2
 honor_noqa = "True"
 lines_between_sections = 1
+
+[tool.mypi]
+python_version = "3.11"
+cache_dir = ".mypy_cache/normal"
+allow_redefinition = true
+warn_unused_configs = true
+warn_redundant_casts = true
+show_error_codes = true
+show_column_numbers = true
+check_untyped_defs = true
+follow_imports = "silent"
+
+[[tool.mypy.overrides]]
+module = "numpy.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "scipy.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "ssqueezepy.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "torch.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "torchaudio.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "torchvision.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "plotly.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "matplotlib.*"
+ignore_missing_imports = true
 
 [build-system]
 requires = ["poetry-core"]
