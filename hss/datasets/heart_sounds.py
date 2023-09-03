@@ -32,17 +32,18 @@ def collate_fn(batch):
 
 
 class PhysionetChallenge2016(Dataset):
-    """ Heart Sounds Dataset from PhysioNet Challenge 2016 """
+    """Heart Sounds Dataset from PhysioNet Challenge 2016"""
+
     _ext_audio = ".wav"
     _ext_reference = ".csv"
 
     def __init__(
-            self,
-            root: str,
-            url: str = "training",
-            train: bool = True,
-            download: bool = False,
-            transform: torchvision.transforms.Compose = None,
+        self,
+        root: str,
+        url: str = "training",
+        train: bool = True,
+        download: bool = False,
+        transform: torchvision.transforms.Compose = None,
     ):
         """
         Instantiate HeartSoundsAudio object.
@@ -78,9 +79,7 @@ class PhysionetChallenge2016(Dataset):
                     download_url_to_file(url + "?download", f"{root}/{archive}")
                     extract_zip(archive, to_path=f"{root}/{basename}")
 
-        walker = walk_files(
-            self._path, suffix=self._ext_audio, prefix=True, remove_suffix=True
-        )
+        walker = walk_files(self._path, suffix=self._ext_audio, prefix=True, remove_suffix=True)
         self._walker = list(walker)
 
     def __getitem__(self, n):
@@ -90,7 +89,7 @@ class PhysionetChallenge2016(Dataset):
         path = os.path.dirname(file_id)
         df = pd.read_csv(
             os.path.join(path, reference + self._ext_reference),
-            names=["ID", "Condition"]
+            names=["ID", "Condition"],
         )
 
         set_name = path.split("/")[-1]
@@ -104,13 +103,7 @@ class PhysionetChallenge2016(Dataset):
 
         output = self.transform(output[0])
 
-        return (
-            output,
-            sample_rate,
-            label,
-            set_name,
-            basename
-        )
+        return (output, sample_rate, label, set_name, basename)
 
     def __len__(self) -> int:
         return len(self._walker)
@@ -121,14 +114,13 @@ class PhysionetChallenge2016(Dataset):
 
 
 class DavidSpringerHSS(Dataset):
-
     def __init__(
-            self,
-            dst: str,
-            download: bool = False,
-            transform: Optional[torchvision.transforms.Compose] = None,
-            labels_transform: Optional[torchvision.transforms.Compose] = None,
-            dtype: torch.dtype = torch.float64,
+        self,
+        dst: str,
+        download: bool = False,
+        transform: Optional[torchvision.transforms.Compose] = None,
+        labels_transform: Optional[torchvision.transforms.Compose] = None,
+        dtype: torch.dtype = torch.float64,
     ) -> None:
         self.dst = dst
         self.transform = transform
@@ -136,7 +128,7 @@ class DavidSpringerHSS(Dataset):
         self.dtype = dtype
 
         url = "https://pub-db0cd070a4f94dabb9b58161850d4868.r2.dev/heart-sounds/springer_sounds.zip"
-        basename, archive_ext = os.path.basename(url).split('.')
+        basename, archive_ext = os.path.basename(url).split(".")
 
         if download:
             if not os.path.isdir(f"{self.dst}/{basename}"):
@@ -145,9 +137,7 @@ class DavidSpringerHSS(Dataset):
                     extract_zip(os.path.join(f"{dst}/{basename}.{archive_ext}"), to_path=dst)
                     os.remove(os.path.join(f"{dst}/{basename}.{archive_ext}"))
 
-        walker = walk_files(
-            self.dst, suffix=".csv", prefix=True, remove_suffix=True
-        )
+        walker = walk_files(self.dst, suffix=".csv", prefix=True, remove_suffix=True)
         self.walker = list(walker)
 
     def __getitem__(self, n) -> Any:
