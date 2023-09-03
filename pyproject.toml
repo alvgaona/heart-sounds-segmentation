@@ -17,6 +17,7 @@ matplotlib = "^3.7.2"
 pytorch-lightning = "^2.0.7"
 torchaudio = "^2.0.2"
 torchvision = "^0.15.2"
+plotly = "^5.16.1"
 
 [tool.poetry.group.dev.dependencies]
 flake8 = "^6.1.0"
@@ -24,6 +25,13 @@ isort = "^5.12.0"
 yapf = "^0.40.1"
 pytest = "^7.4.0"
 mypy = "^1.5.1"
+
+[tool.isort]
+profile = "hug"
+src_paths = "*"
+lines_after_imports = 2
+honor_noqa = "True"
+lines_between_sections = 1
 
 [build-system]
 requires = ["poetry-core"]

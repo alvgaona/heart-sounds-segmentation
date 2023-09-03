@@ -1343,6 +1343,21 @@ docs = ["furo (>=2023.7.26)", "proselint (>=0.13)", "sphinx (>=7.1.1)", "sphinx-
 test = ["appdirs (==1.4.4)", "covdefaults (>=2.3)", "pytest (>=7.4)", "pytest-cov (>=4.1)", "pytest-mock (>=3.11.1)"]
 
 [[package]]
+name = "plotly"
+version = "5.16.1"
+description = "An open-source, interactive data visualization library for Python"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "plotly-5.16.1-py2.py3-none-any.whl", hash = "sha256:19cc34f339acd4e624177806c14df22f388f23fb70658b03aad959a0e650a0dc"},
+    {file = "plotly-5.16.1.tar.gz", hash = "sha256:295ac25edeb18c893abb71dcadcea075b78fd6fdf07cee4217a4e1009667925b"},
+]
+
+[package.dependencies]
+packaging = "*"
+tenacity = ">=6.2.0"
+
+[[package]]
 name = "pluggy"
 version = "1.3.0"
 description = "plugin and hook calling mechanisms for python"
@@ -1633,6 +1648,20 @@ files = [
 
 [package.dependencies]
 mpmath = ">=0.19"
+
+[[package]]
+name = "tenacity"
+version = "8.2.3"
+description = "Retry code until it succeeds"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "tenacity-8.2.3-py3-none-any.whl", hash = "sha256:ce510e327a630c9e1beaf17d42e6ffacc88185044ad85cf74c0a8887c6a0f88c"},
+    {file = "tenacity-8.2.3.tar.gz", hash = "sha256:5398ef0d78e63f40007c1fb4c0bff96e1911394d2fa8d194f77619c05ff6cc8a"},
+]
+
+[package.extras]
+doc = ["reno", "sphinx", "tornado (>=4.5)"]
 
 [[package]]
 name = "tomli"
@@ -1963,4 +1992,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.13"
-content-hash = "5c0116f37eab333df84210b69f34a81478062008ac0b5bd1d97e18dd22bdf042"
+content-hash = "10035d48c784da41af1a8f24d025583def39f33106fab0f0b9220baaef07cb94"
