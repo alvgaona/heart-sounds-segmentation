@@ -10,11 +10,11 @@ packages = [{include = "hss"}]
 [tool.poetry.dependencies]
 python = ">=3.9,<3.13"
 ssqueezepy = "^0.6.3"
-#torch = "^2.0.1"
-#scipy = "^1.11.2"
-#pandas = "^2.0.3"
-#torchaudio = "^2.0.2"
-#torchvision = "^0.15.2"
+torch = "^2.0.1"
+scipy = "^1.11.2"
+pandas = "^2.0.3"
+torchaudio = "^2.0.2"
+torchvision = "^0.15.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"
