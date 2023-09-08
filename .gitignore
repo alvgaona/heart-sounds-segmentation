@@ -1,5 +1,6 @@
 __pycache__/
-resources/data/
+resources/
+.pytest_cache/
 
 # JetBrains
 .idea/
