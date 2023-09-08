@@ -2,7 +2,6 @@ import os
 
 import pandas as pd
 import plotly.express as px
-import scipy
 import torch
 from torch.utils.data import DataLoader
 from torchvision import transforms
@@ -19,7 +18,7 @@ if __name__ == '__main__':
 
     transform = transforms.Compose((
         resample,
-        FSST(1000, window=scipy.signal.get_window(('kaiser', 0.5), 128, fftbins=True))
+        # FSST(1000, window=scipy.signal.get_window(('kaiser', 0.5), 128, fftbins=True))
     ))
 
     hss_dataset = DavidSpringerHSS(os.path.join(ROOT, "resources/data"), download=True, transform=transform)
