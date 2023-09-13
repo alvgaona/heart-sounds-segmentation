@@ -10,7 +10,9 @@ class FSST:
     Fourier Synchrosqueezed Transform
     """
 
-    def __init__(self, fs: float, flipud: bool = False, window: Optional[np.ndarray] = None):
+    def __init__(
+        self, fs: float, flipud: bool = False, window: Optional[np.ndarray] = None
+    ):
         """
         Args:
             fs (float): sample frequency
@@ -38,5 +40,8 @@ class FSST:
             fs=self.fs,
             window=self.window,
         )
+
+        if isinstance(f, torch.Tensor) and f.get_device() > -1:
+            f = f.cpu()
 
         return x, fsst, stft, np.ascontiguousarray(f)

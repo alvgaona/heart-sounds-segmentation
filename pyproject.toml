@@ -10,12 +10,15 @@ packages = [{include = "hss"}]
 [tool.poetry.dependencies]
 python = ">=3.9,<3.13"
 ssqueezepy = "^0.6.3"
-torch = "^2.0.1"
 scipy = "^1.11.2"
 pandas = "^2.0.3"
-torchaudio = "^2.0.2"
-torchvision = "^0.15.2"
 numba = "^0.57.1"
+cupy-cuda11x = "^12.2.0"
+torch = { version = "^2.0.1+cu118", source = "pytorch" }
+torchvision = { version = "^0.15.2+cu118", source = "pytorch" }
+torchaudio = { version = "^2.0.2+cu118", source = "pytorch" }
+sox = { version = "^1.4.1", platform = "linux" }
+soundfile = { version = "^0.12.1", platform = "win32" }
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"
@@ -25,6 +28,11 @@ isort = "^5.12.0"
 black = "^23.7.0"
 flake8 = "^6.1.0"
 mypy = "^1.5.1"
+
+[[tool.poetry.source]]
+name = "pytorch"
+url = "https://download.pytorch.org/whl/cu118"
+priority = "explicit"
 
 [tool.isort]
 profile = "hug"
