@@ -5,6 +5,7 @@ from torch import nn
 
 from hss.utils.training import show_progress
 
+
 ROOT = os.path.dirname(os.path.dirname(__file__))
 
 if __name__ == "__main__":

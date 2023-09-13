@@ -1,7 +1,6 @@
 import sys
-from typing import Optional
-
 from datetime import timedelta
+from typing import Optional
 
 import pandas as pd
 
@@ -41,7 +40,7 @@ def show_progress(
     table = {
         "Epoch": str(epoch),
         "Iteration": str(iteration),
-        "Time Elapsed (hh:mm:ss)": hms[0] + ':' + hms[1] + ':' + f"{float(hms[2]):.4f}",
+        "Time Elapsed (hh:mm:ss)": hms[0] + ":" + hms[1] + ":" + f"{float(hms[2]):.4f}",
         "Mini-batch Accuracy": f"{(mini_batch_acc * 100):.4f}" + "%",
         "Mini-batch Loss": f"{mini_batch_loss:.4f}",
     }
@@ -66,4 +65,3 @@ def show_progress(
         values_str += f" {value : >{len(header)}} |"
     print(values_str)
     print(f"|{'=' * (len(header_str) - 2)}|", end="")
-

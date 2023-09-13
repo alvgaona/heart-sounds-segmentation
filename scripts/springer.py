@@ -15,6 +15,7 @@ from hss.model.segmenter import HSSegmenter
 from hss.transforms import FSST, Resample
 from hss.utils.training import show_progress
 
+
 ROOT = os.path.dirname(os.path.dirname(__file__))
 
 if __name__ == "__main__":
@@ -77,7 +78,7 @@ if __name__ == "__main__":
                     iteration=k + 1,
                     time_elapsed=time.time() - start_time,
                     mini_batch_size=mini_batch_size,
-                    mini_batch_acc=correct/total,
+                    mini_batch_acc=correct / total,
                     mini_batch_loss=running_loss / mini_batch_size,
                     learning_rate=learning_rate,
                 )
