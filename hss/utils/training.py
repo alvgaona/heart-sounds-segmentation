@@ -18,6 +18,7 @@ def show_progress(
     val_loss: Optional[float] = None,
 ) -> None:
     """
+    Shows the progress in a well-organized format.
 
     Args:
         epoch (int): the current epoch.

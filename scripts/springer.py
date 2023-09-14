@@ -13,6 +13,7 @@ from torchvision import transforms
 from hss.datasets.heart_sounds import DavidSpringerHSS
 from hss.model.segmenter import HSSegmenter
 from hss.transforms import FSST, Resample
+from hss.utils.preprocess import frame_signal
 from hss.utils.training import show_progress
 
 
@@ -22,7 +23,7 @@ if __name__ == "__main__":
     transform = transforms.Compose(
         (
             Resample(35500),
-            # FSST(1000, window=scipy.signal.get_window(('kaiser', 0.5), 128, fftbins=True))
+            # FSST(1000, yndow=scipy.signal.get_yndow(('kaiser', 0.5), 128, fftbins=True))
         )
     )
 
@@ -45,14 +46,16 @@ if __name__ == "__main__":
         running_loss = 0.0
         total = 0
         correct = 0
-        for k, (x, y) in enumerate(hss_loader):
+        for i, (x, y) in enumerate(hss_loader):
+            x = x.reshape(-1, 1)
+            y = y.reshape(-1, 1)
+
             partial_correct = 0
             partial_total = 0
 
-            x = x.type(torch.float32)
+            x = x.type(torch.float32).cuda()
             optimizer.zero_grad()
-            x = x.reshape(-1, 1).cuda()
-            y = y.squeeze(0).cuda() - 1
+            y = y.squeeze(1).cuda() - 1
             optimizer.zero_grad()
             outputs = model(x)
             loss = criterion(outputs, y)
@@ -68,14 +71,13 @@ if __name__ == "__main__":
             correct += partial_correct
             running_loss += loss.item()
 
-            # print(
-            #     f"Input: {k + 1} Acc:{partial_correct / partial_total} Loss: {loss.item():.3f}"
-            # )
+            print(f"Iteration: {i + 1} Acc: {partial_correct / partial_total}", end="")
+            print("", end="\r")
 
-            if k % mini_batch_size == mini_batch_size - 1:
+            if i % mini_batch_size == mini_batch_size - 1:
                 show_progress(
                     epoch=epoch + 1,
-                    iteration=k + 1,
+                    iteration=i + 1,
                     time_elapsed=time.time() - start_time,
                     mini_batch_size=mini_batch_size,
                     mini_batch_acc=correct / total,
@@ -86,5 +88,3 @@ if __name__ == "__main__":
                 running_loss = 0.0
                 total = 0
                 correct = 0
-
-        # print(f"Epoch: {epoch + 1} Loss: {loss / len(hss_loader):.3f}")
