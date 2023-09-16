@@ -1,9 +1,6 @@
 import os
 import time
 
-import numpy as np
-import pandas as pd
-import plotly.express as px
 import scipy
 import torch
 from torch import nn
@@ -13,8 +10,9 @@ from torchvision import transforms
 from hss.datasets.heart_sounds import DavidSpringerHSS
 from hss.model.segmenter import HSSegmenter
 from hss.transforms import FSST, Resample
-from hss.utils.preprocess import frame_signal
 from hss.utils.training import show_progress
+
+from torch.optim.lr_scheduler import LambdaLR
 
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
@@ -23,7 +21,7 @@ if __name__ == "__main__":
     transform = transforms.Compose(
         (
             Resample(35500),
-            # FSST(1000, yndow=scipy.signal.get_yndow(('kaiser', 0.5), 128, fftbins=True))
+            FSST(1000, window=scipy.signal.get_window(('kaiser', 0.5), 128, fftbins=True))
         )
     )
 
@@ -38,53 +36,66 @@ if __name__ == "__main__":
     learning_rate = 0.01
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
-    mini_batch_size = 20
+    scheduler = LambdaLR(optimizer, lr_lambda=[lambda epoch: 0.9 ** epoch])
+
+    mini_batch_size = 50
+
+    print("Training starting...")
 
     start_time = time.time()
-    for epoch in range(6):
+    for epoch in range(1, 11):
         model.train()
         running_loss = 0.0
         total = 0
         correct = 0
-        for i, (x, y) in enumerate(hss_loader):
-            x = x.reshape(-1, 1)
+        for i, (x, y) in enumerate(hss_loader, 1):
+            iteration = i + epoch * len(hss_dataset)
+            x, s, _, f = x
+            f = f.squeeze(0)
+            s = torch.t(s.squeeze(0))
+            indices = torch.logical_and(f >= 5, f <= 200)
+            f = f[indices]
+
+            z = torch.zeros((s.shape[0], f.shape[0]), dtype=torch.complex64)
+
+            for j in range(len(f)):
+                z[:, j] = s[:, j]
+
+            z = torch.hstack((z.real, z.imag)).cuda()
             y = y.reshape(-1, 1)
 
             partial_correct = 0
             partial_total = 0
 
-            x = x.type(torch.float32).cuda()
             optimizer.zero_grad()
             y = y.squeeze(1).cuda() - 1
             optimizer.zero_grad()
-            outputs = model(x)
+            outputs = model(z)
             loss = criterion(outputs, y)
             loss.backward()
             optimizer.step()
+            scheduler.step()
 
             predicted = torch.max(outputs, dim=1).indices
 
             partial_total += y.size(0)
             partial_correct += torch.sum(predicted == y).item()
-
             total += partial_total
             correct += partial_correct
             running_loss += loss.item()
 
-            print(f"Iteration: {i + 1} Acc: {partial_correct / partial_total}", end="")
-            print("", end="\r")
+            # print(f"Loss: {loss.item()}, Acc: {partial_correct / partial_total}")
 
             if i % mini_batch_size == mini_batch_size - 1:
                 show_progress(
                     epoch=epoch + 1,
-                    iteration=i + 1,
+                    iteration=iteration,
                     time_elapsed=time.time() - start_time,
                     mini_batch_size=mini_batch_size,
                     mini_batch_acc=correct / total,
                     mini_batch_loss=running_loss / mini_batch_size,
                     learning_rate=learning_rate,
                 )
-                start_time = time.time()
                 running_loss = 0.0
                 total = 0
                 correct = 0
