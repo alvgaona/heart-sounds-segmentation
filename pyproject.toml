@@ -29,10 +29,18 @@ black = "^23.7.0"
 flake8 = "^6.1.0"
 mypy = "^1.5.1"
 
+
+[tool.poetry.group.types.dependencies]
+pandas-stubs = "2.0.2.230605"
+
 [[tool.poetry.source]]
 name = "pytorch"
 url = "https://download.pytorch.org/whl/cu118"
 priority = "explicit"
+
+[tool.black]
+target-version = ["py310", "py311"]
+line-length = 120
 
 [tool.isort]
 profile = "hug"

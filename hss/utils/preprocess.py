@@ -8,7 +8,7 @@ import torch
 def frame_signal(
     x: Union[torch.Tensor, np.ndarray],
     y: Union[torch.Tensor, np.ndarray],
-    stride: float,
+    stride: int,
     n: int,
 ) -> Tuple[List[Union[torch.Tensor, np.ndarray]], ...]:
     """

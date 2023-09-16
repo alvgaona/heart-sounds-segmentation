@@ -24,14 +24,10 @@ class HSSegmenter(nn.Module):
         self.softmax = nn.Softmax(dim=1).cuda()
 
     def forward(self, x):
-        output, (self.hn1, self.cn1) = self.lstm_1(
-            x, (self.hn1.detach(), self.cn1.detach())
-        )
+        output, (self.hn1, self.cn1) = self.lstm_1(x, (self.hn1.detach(), self.cn1.detach()))
         output = self.dropout(output)
         output = self.relu(output)
-        output, (self.hn2, self.cn2) = self.lstm_2(
-            output, (self.hn2.detach(), self.cn2.detach())
-        )
+        output, (self.hn2, self.cn2) = self.lstm_2(output, (self.hn2.detach(), self.cn2.detach()))
         output = self.relu(output)
         output = self.linear(output)
         return self.softmax(output)

@@ -79,9 +79,7 @@ class PhysionetChallenge2016(Dataset):
                     download_url_to_file(url + "?download", f"{root}/{archive}")
                     extract_zip(archive, to_path=f"{root}/{basename}")
 
-        walker = walk_files(
-            self._path, suffix=self._ext_audio, prefix=True, remove_suffix=True
-        )
+        walker = walk_files(self._path, suffix=self._ext_audio, prefix=True, remove_suffix=True)
         self._walker = list(walker)
 
     def __getitem__(self, n):
@@ -136,9 +134,7 @@ class DavidSpringerHSS(Dataset):
             if not os.path.isdir(f"{self.dst}/{basename}"):
                 if not os.path.isfile(basename + "." + archive_ext):
                     download_url_to_file(url, f"{dst}/{basename}.{archive_ext}")
-                    extract_zip(
-                        os.path.join(f"{dst}/{basename}.{archive_ext}"), to_path=dst
-                    )
+                    extract_zip(os.path.join(f"{dst}/{basename}.{archive_ext}"), to_path=dst)
                     os.remove(os.path.join(f"{dst}/{basename}.{archive_ext}"))
 
         walker = walk_files(self.dst, suffix=".csv", prefix=True, remove_suffix=True)
@@ -147,8 +143,8 @@ class DavidSpringerHSS(Dataset):
     def __getitem__(self, n) -> Any:
         file_id = self.walker[n]
         df = pd.read_csv(file_id + ".csv", skiprows=1, names=["Signals", "Labels"])
-        x = df.loc[:, "Signals"].to_numpy()
-        y = df.loc[:, "Labels"].to_numpy()
+        x = torch.tensor(df.loc[:, "Signals"].to_numpy())
+        y = torch.tensor(df.loc[:, "Labels"].to_numpy(), dtype=torch.int64)
 
         if self.transform is not None:
             x = self.transform(x)
@@ -156,7 +152,7 @@ class DavidSpringerHSS(Dataset):
                 # Looks for the first resample transform, if there's any
                 # to match the length of the new resampled signal.
                 if isinstance(t, Resample):
-                    y = torch.tensor(np.round(t(y)), dtype=torch.int64)
+                    y = np.round(t(y))
                     break
 
         return x, y

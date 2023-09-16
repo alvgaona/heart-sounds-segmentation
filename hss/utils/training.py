@@ -31,9 +31,7 @@ def show_progress(
         val_loss (float, optional): the validation loss value.
     """
     if iteration < 0:
-        raise ValueError(
-            f"Iteration {iteration} should not be negative. Please pass a non-negative number."
-        )
+        raise ValueError(f"Iteration {iteration} should not be negative. Please pass a non-negative number.")
 
     td = timedelta(seconds=time_elapsed)
     hms = str(td).split(":")

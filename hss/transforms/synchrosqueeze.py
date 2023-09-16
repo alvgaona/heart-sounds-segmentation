@@ -10,9 +10,7 @@ class FSST:
     Fourier Synchrosqueezed Transform
     """
 
-    def __init__(
-        self, fs: float, flipud: bool = False, window: Optional[np.ndarray] = None
-    ):
+    def __init__(self, fs: float, flipud: bool = False, window: Optional[np.ndarray] = None):
         """
         Args:
             fs (float): sample frequency
