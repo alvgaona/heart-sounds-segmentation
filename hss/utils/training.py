@@ -1,4 +1,3 @@
-import sys
 from datetime import timedelta
 from typing import Optional
 
@@ -23,7 +22,7 @@ def show_progress(
     Args:
         epoch (int): the current epoch.
         iteration (int): the current iteration.
-        time_elapsed (float): time elapsed passed in milliseconds.
+        time_elapsed (float): time elapsed passed in seconds.
         mini_batch_size (int): size of the mini-batch
         mini_batch_acc (float): the mini-batch accuracy.
         mini_batch_loss (float): the mini-batch loss value.
@@ -36,12 +35,12 @@ def show_progress(
             f"Iteration {iteration} should not be negative. Please pass a non-negative number."
         )
 
-    td = timedelta(milliseconds=time_elapsed)
+    td = timedelta(seconds=time_elapsed)
     hms = str(td).split(":")
     table = {
         "Epoch": str(epoch),
         "Iteration": str(iteration),
-        "Time Elapsed (hh:mm:ss)": hms[0] + ":" + hms[1] + ":" + f"{float(hms[2]):.4f}",
+        "Time Elapsed (hh:mm:ss)": hms[0] + ":" + hms[1] + ":" + f"{float(hms[2]):.2f}",
         "Mini-batch Accuracy": f"{(mini_batch_acc * 100):.4f}" + "%",
         "Mini-batch Loss": f"{mini_batch_loss:.4f}",
     }
