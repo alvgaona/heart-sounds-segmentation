@@ -2,6 +2,7 @@ import math
 import os
 import time
 
+import scipy
 import torch
 from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
@@ -27,15 +28,14 @@ if __name__ == "__main__":
     )
 
     hss_dataset = DavidSpringerHSS(os.path.join(ROOT, "resources/data"), download=True, transform=transform)
-    batch_size = 5
+    batch_size = 1
     hss_loader = DataLoader(hss_dataset, batch_size=batch_size, shuffle=True, generator=torch.Generator(device="cuda"))
 
-    model = HSSegmenter(batch_size=batch_size)
+    model = HSSegmenter(input_size=1, batch_size=batch_size)
 
-    criterion = nn.CrossEntropyLoss()
+    loss_fn = nn.CrossEntropyLoss()
 
-    learning_rate = 0.01
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 
     scheduler = LambdaLR(optimizer, lr_lambda=[lambda epoch: 0.9**epoch])
 
@@ -44,33 +44,24 @@ if __name__ == "__main__":
     print("Training starting...")
 
     start_time = time.time()
-    for epoch in range(1, 11):
+    for epoch in range(1, 10):
         model.train()
         running_loss = 0.0
         total = 0
         correct = 0
         for i, (x, y) in enumerate(hss_loader, 1):
             iteration = i + (epoch - 1) * math.ceil(len(hss_dataset) / batch_size)
-            partial_correct = 0
-            partial_total = 0
-
-            optimizer.zero_grad()
             optimizer.zero_grad()
             outputs = model(x)
-
-            loss = criterion(outputs.permute((0, 2, 1)), y)
+            loss = loss_fn(outputs.permute((0, 2, 1)), y)
             loss.backward()
             optimizer.step()
-            scheduler.step()
 
-            predicted = torch.max(outputs, dim=2).indices
-            partial_total += y.size(1) * y.size(0)
-            partial_correct += torch.sum(predicted == y).item()
-            total += partial_total
-            correct += partial_correct
             running_loss += loss.item()
 
-            # print(f"Iteration: {iteration}, Loss: {loss.item()}, Acc: {partial_correct / partial_total}")
+            predicted = torch.max(outputs, dim=1).indices
+            total += y.size(0) * y.size(1)
+            correct += torch.sum(predicted == y).item()
 
             if iteration % mini_batch_size == mini_batch_size - 1:
                 show_progress(
@@ -80,8 +71,9 @@ if __name__ == "__main__":
                     mini_batch_size=mini_batch_size,
                     mini_batch_acc=correct / total,
                     mini_batch_loss=running_loss / mini_batch_size,
-                    learning_rate=learning_rate,
+                    learning_rate=scheduler.get_last_lr()[0],
                 )
                 running_loss = 0.0
                 total = 0
                 correct = 0
+        scheduler.step()
