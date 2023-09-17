@@ -143,7 +143,7 @@ class DavidSpringerHSS(Dataset):
     def __getitem__(self, n) -> Any:
         file_id = self.walker[n]
         df = pd.read_csv(file_id + ".csv", skiprows=1, names=["Signals", "Labels"])
-        x = torch.tensor(df.loc[:, "Signals"].to_numpy())
+        x = torch.tensor(df.loc[:, "Signals"].to_numpy(), dtype=torch.float32)
         y = torch.tensor(df.loc[:, "Labels"].to_numpy(), dtype=torch.int64)
 
         if self.transform is not None:
@@ -152,10 +152,11 @@ class DavidSpringerHSS(Dataset):
                 # Looks for the first resample transform, if there's any
                 # to match the length of the new resampled signal.
                 if isinstance(t, Resample):
-                    y = np.round(t(y))
+                    torch.set_printoptions(profile="full")
+                    y = torch.round(t(y)).type(torch.int64) - 1
                     break
 
-        return x, y
+        return x.unsqueeze(1), y
 
     def __len__(self) -> int:
         return len(self.walker)

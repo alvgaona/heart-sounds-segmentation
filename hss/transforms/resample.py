@@ -1,5 +1,6 @@
 import numpy as np
 import scipy
+import torch
 
 
 class Resample:
@@ -10,7 +11,7 @@ class Resample:
         """
         self.num = num
 
-    def __call__(self, x) -> np.ndarray:
+    def __call__(self, x: torch.Tensor) -> torch.Tensor:
         """
         Args:
             x: input signal to get resampled
@@ -18,4 +19,4 @@ class Resample:
         Returns:
             (np.ndarray): resampled signal
         """
-        return scipy.signal.resample(x, self.num)
+        return torch.tensor(scipy.signal.resample(x.cpu(), self.num), dtype=torch.float32)
