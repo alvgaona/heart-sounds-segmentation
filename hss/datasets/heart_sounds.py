@@ -152,11 +152,12 @@ class DavidSpringerHSS(Dataset):
                 # Looks for the first resample transform, if there's any
                 # to match the length of the new resampled signal.
                 if isinstance(t, Resample):
-                    torch.set_printoptions(profile="full")
                     y = torch.round(t(y)).type(torch.int64) - 1
                     break
 
-        return x.unsqueeze(1), y
+        if len(x.shape) == 1:
+            x = x.unsqueeze(1)
+        return x, y
 
     def __len__(self) -> int:
         return len(self.walker)
