@@ -23,28 +23,27 @@ if __name__ == "__main__":
     transform = transforms.Compose(
         (
             Resample(35500),
-            # FSST(1000, window=scipy.signal.get_window(("kaiser", 0.5), 128, fftbins=True)),
+            FSST(
+                1000,
+                window=scipy.signal.get_window(("kaiser", 0.5), 128, fftbins=True),
+                truncate_freq=(25, 120),
+                stack=True,
+            ),
         )
     )
 
     hss_dataset = DavidSpringerHSS(os.path.join(ROOT, "resources/data"), download=True, transform=transform)
-    batch_size = 1
+    batch_size = 6
     hss_loader = DataLoader(hss_dataset, batch_size=batch_size, shuffle=True, generator=torch.Generator(device="cuda"))
 
-    model = HSSegmenter(input_size=1, batch_size=batch_size)
-
+    model = HSSegmenter(input_size=98, batch_size=batch_size)
     loss_fn = nn.CrossEntropyLoss()
-
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-
-    scheduler = LambdaLR(optimizer, lr_lambda=[lambda epoch: 0.9**epoch])
+    scheduler = LambdaLR(optimizer, lr_lambda=[lambda epoch: 0.95**epoch])
 
     mini_batch_size = 1
-
-    print("Training starting...")
-
     start_time = time.time()
-    for epoch in range(1, 10):
+    for epoch in range(1, 20):
         model.train()
         running_loss = 0.0
         total = 0
@@ -58,8 +57,7 @@ if __name__ == "__main__":
             optimizer.step()
 
             running_loss += loss.item()
-
-            predicted = torch.max(outputs, dim=1).indices
+            predicted = torch.max(outputs, dim=2).indices
             total += y.size(0) * y.size(1)
             correct += torch.sum(predicted == y).item()
 
