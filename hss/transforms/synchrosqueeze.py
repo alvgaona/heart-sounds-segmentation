@@ -61,7 +61,7 @@ class FSST:
             fsst, f = self._truncate_frequencies(fsst, f.contiguous())
 
         if self.abs:
-            return torch.abs(fsst)
+            return torch.abs(fsst).t()
 
         if self.stack:
             return self._stack_real_imag(fsst)
