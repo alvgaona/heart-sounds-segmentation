@@ -47,6 +47,9 @@ max-line-length = 120
 extend-ignore = [
     "E203"
 ]
+exclude = [
+    ".venv/"
+]
 
 [tool.black]
 target-version = ["py310", "py311"]
