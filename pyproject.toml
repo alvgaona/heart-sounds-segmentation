@@ -33,6 +33,10 @@ mypy = "^1.5.1"
 [tool.poetry.group.types.dependencies]
 pandas-stubs = "2.0.2.230605"
 
+
+[tool.poetry.group.test.dependencies]
+flake8-pyproject = "^1.2.3"
+
 [[tool.poetry.source]]
 name = "pytorch"
 url = "https://download.pytorch.org/whl/cu118"
@@ -40,6 +44,9 @@ priority = "explicit"
 
 [tool.flake8]
 max-line-length = 120
+extend-ignore = [
+    "E203"
+]
 
 [tool.black]
 target-version = ["py310", "py311"]

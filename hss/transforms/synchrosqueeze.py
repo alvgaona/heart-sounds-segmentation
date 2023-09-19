@@ -1,4 +1,4 @@
-from typing import Optional, Tuple
+from typing import Optional
 
 import numpy as np
 import ssqueezepy as ssq
@@ -24,7 +24,8 @@ class FSST:
             fs (float): sample frequency
             flipud (bool): ?. Default: False
             window (numpy.ndarray): window provided to compute the transform. Default: None
-            stack (bool): true or false in order to stack or not the real and image parts of the spectrum. Default: False
+            stack (bool): true or false in order to stack or not the real and image parts of the spectrum.
+                Default: False
         """
         self.flipud = flipud
         self.fs = fs
