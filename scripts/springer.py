@@ -26,17 +26,17 @@ if __name__ == "__main__":
             FSST(
                 1000,
                 window=scipy.signal.get_window(("kaiser", 0.5), 128, fftbins=True),
-                truncate_freq=(25, 120),
+                truncate_freq=(25, 200),
                 stack=True,
             ),
         )
     )
 
     hss_dataset = DavidSpringerHSS(os.path.join(ROOT, "resources/data"), download=True, transform=transform)
-    batch_size = 6
+    batch_size = 1
     hss_loader = DataLoader(hss_dataset, batch_size=batch_size, shuffle=True, generator=torch.Generator(device="cuda"))
 
-    model = HSSegmenter(input_size=98, batch_size=batch_size)
+    model = HSSegmenter(input_size=44, batch_size=batch_size)
     loss_fn = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
     scheduler = LambdaLR(optimizer, lr_lambda=[lambda epoch: 0.95**epoch])
