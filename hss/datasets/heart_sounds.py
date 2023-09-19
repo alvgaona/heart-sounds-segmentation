@@ -142,22 +142,25 @@ class DavidSpringerHSS(Dataset):
 
     def __getitem__(self, n) -> Any:
         file_id = self.walker[n]
-        df = pd.read_csv(file_id + ".csv", skiprows=1, names=["Signals", "Labels"])
-        x = torch.tensor(df.loc[:, "Signals"].to_numpy(), dtype=torch.float32)
-        y = torch.tensor(df.loc[:, "Labels"].to_numpy(), dtype=torch.int64)
+        try:
+            df = pd.read_csv(file_id + ".csv", skiprows=1, names=["Signals", "Labels"])
+            x = torch.tensor(df.loc[:, "Signals"].to_numpy(), dtype=torch.float32)
+            y = torch.tensor(df.loc[:, "Labels"].to_numpy(), dtype=torch.int64)
 
-        if self.transform is not None:
-            x = self.transform(x)
-            for t in self.transform.transforms:
-                # Looks for the first resample transform, if there's any
-                # to match the length of the new resampled signal.
-                if isinstance(t, Resample):
-                    y = torch.round(t(y)).type(torch.int64) - 1
-                    break
+            if self.transform is not None:
+                x = self.transform(x)
+                for t in self.transform.transforms:
+                    # Looks for the first resample transform, if there's any
+                    # to match the length of the new resampled signal.
+                    if isinstance(t, Resample):
+                        y = torch.round(t(y)).type(torch.int64) - 1
+                        break
 
-        if len(x.shape) == 1:
-            x = x.unsqueeze(1)
-        return x, y
+            if len(x.shape) == 1:
+                x = x.unsqueeze(1)
+            return x, y
+        except Exception:
+            print(f"Error produced for file {os.path.basename(file_id) + '.csv'}")
 
     def __len__(self) -> int:
         return len(self.walker)
