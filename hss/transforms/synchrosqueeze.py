@@ -15,6 +15,7 @@ class FSST:
         fs: float,
         flipud: bool = False,
         window: Optional[np.ndarray] = None,
+        abs: bool = False,
         stack: bool = False,
         truncate_freq: Optional[tuple] = None,
     ):
@@ -28,6 +29,7 @@ class FSST:
         self.flipud = flipud
         self.fs = fs
         self.window = window
+        self.abs = abs
         self.stack = stack
         self.truncate_freq = truncate_freq
 
@@ -49,16 +51,24 @@ class FSST:
             window=self.window,
         )
 
+        if isinstance(fsst, np.ndarray):
+            fsst = torch.tensor(fsst)
+
+        if isinstance(f, np.ndarray):
+            f = torch.tensor(f)
+
         if self.truncate_freq:
-            f = self._truncate_frequencies(f.contiguous())
+            fsst, f = self._truncate_frequencies(fsst, f.contiguous())
+
+        if self.abs:
+            return torch.abs(fsst)
 
         if self.stack:
-            return self._stack_real_imag(fsst, f)
+            return self._stack_real_imag(fsst)
 
         return fsst
 
-    @classmethod
-    def _stack_real_imag(cls, s: torch.Tensor, f: torch.Tensor) -> torch.Tensor:
+    def _stack_real_imag(self, s: torch.Tensor) -> torch.Tensor:
         """
         Stack real and image part of the transform.
 
@@ -70,14 +80,18 @@ class FSST:
         """
         s = torch.t(s)
 
-        z = torch.zeros((s.shape[0], f.shape[0]), dtype=torch.complex64)
+        z = torch.zeros((s.shape[0], s.shape[1] * (2 if self.stack else 1)))
 
-        for j in range(len(f)):
-            z[:, j] = s[:, j]
+        for j in range(0, s.shape[1], 2):
+            r = s[:, j].real
+            i = s[:, j].imag
 
-        return torch.hstack((z.real, z.imag))
+            z[:, j] = (r - torch.mean(r)) / torch.std(r, unbiased=True)
+            z[:, j+1] = (i - torch.mean(i)) / torch.std(i, unbiased=True)
 
-    def _truncate_frequencies(self, f: torch.Tensor) -> torch.Tensor:
+        return z
+
+    def _truncate_frequencies(self, s: torch.Tensor, f: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         f = f.squeeze(0)
         indices = torch.logical_and(f >= self.truncate_freq[0], f <= self.truncate_freq[1])
-        return f[indices]
+        return s[indices, :], f[indices]
