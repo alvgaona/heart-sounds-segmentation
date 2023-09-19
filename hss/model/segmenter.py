@@ -33,7 +33,7 @@ class HSSegmenter(nn.Module):
         )
         self.relu = nn.ReLU()
         self.linear = nn.Linear(in_features=hidden_size * 2, out_features=4, bias=True)
-        self.softmax = nn.LogSoftmax(dim=1)
+        self.softmax = nn.LogSoftmax(dim=2)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         output, _ = self.lstm(x, (self.h0, self.c0))
