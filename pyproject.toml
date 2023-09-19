@@ -38,6 +38,9 @@ name = "pytorch"
 url = "https://download.pytorch.org/whl/cu118"
 priority = "explicit"
 
+[tool.flake8]
+max-line-length = 120
+
 [tool.black]
 target-version = ["py310", "py311"]
 line-length = 120

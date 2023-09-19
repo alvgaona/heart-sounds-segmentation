@@ -36,7 +36,7 @@ if __name__ == "__main__":
     batch_size = 1
     hss_loader = DataLoader(hss_dataset, batch_size=batch_size, shuffle=True, generator=torch.Generator(device="cuda"))
 
-    model = HSSegmenter(input_size=44, batch_size=batch_size)
+    model = HSSegmenter(input_size=180, batch_size=batch_size)
     loss_fn = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
     scheduler = LambdaLR(optimizer, lr_lambda=[lambda epoch: 0.95**epoch])
@@ -46,8 +46,8 @@ if __name__ == "__main__":
     for epoch in range(1, 20):
         model.train()
         running_loss = 0.0
-        total = 0
-        correct = 0
+        total = 0.0
+        correct = 0.0
         for i, (x, y) in enumerate(hss_loader, 1):
             iteration = i + (epoch - 1) * math.ceil(len(hss_dataset) / batch_size)
             optimizer.zero_grad()

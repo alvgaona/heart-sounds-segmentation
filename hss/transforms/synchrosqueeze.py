@@ -1,4 +1,4 @@
-from typing import  Optional, Tuple
+from typing import Optional, Tuple
 
 import numpy as np
 import ssqueezepy as ssq
@@ -87,11 +87,15 @@ class FSST:
             i = s[:, j].imag
 
             z[:, j] = (r - torch.mean(r)) / torch.std(r, unbiased=True)
-            z[:, j+1] = (i - torch.mean(i)) / torch.std(i, unbiased=True)
+            z[:, j + 1] = (i - torch.mean(i)) / torch.std(i, unbiased=True)
 
         return z
 
     def _truncate_frequencies(self, s: torch.Tensor, f: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         f = f.squeeze(0)
-        indices = torch.logical_and(f >= self.truncate_freq[0], f <= self.truncate_freq[1])
-        return s[indices, :], f[indices]
+
+        if self.truncate_freq:
+            indices = torch.logical_and(f >= self.truncate_freq[0], f <= self.truncate_freq[1])
+            return s[indices, :], f[indices]
+
+        raise ValueError(f"Truncate frequency is: {self.truncate_freq}")

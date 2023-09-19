@@ -1,8 +1,6 @@
 from datetime import timedelta
 from typing import Optional
 
-import pandas as pd
-
 
 def show_progress(
     *,
