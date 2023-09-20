@@ -1,4 +1,5 @@
 import os
+from collections import namedtuple
 from typing import Any, Optional
 
 import pandas as pd
@@ -11,6 +12,7 @@ from torchaudio.datasets.utils import _extract_zip as extract_zip
 
 from hss.transforms import Resample
 from hss.utils.files import walk_files
+from hss.utils.preprocess import frame_signal
 
 
 def collate_fn(batch):
@@ -113,52 +115,60 @@ class PhysionetChallenge2016(Dataset):
 
 
 class DavidSpringerHSS(Dataset):
+    Signal = namedtuple("Signal", ("x", "y"))
+
     def __init__(
         self,
         dst: str,
         download: bool = False,
+        in_memory: bool = False,
+        framing: bool = False,
         transform: Optional[torchvision.transforms.Compose] = None,
-        labels_transform: Optional[torchvision.transforms.Compose] = None,
         dtype: torch.dtype = torch.float32,
     ) -> None:
         self.dst = dst
         self.transform = transform
-        self.labels_transform = labels_transform
         self.dtype = dtype
+        self.in_memory = in_memory
+        self.data = []
 
         url = "https://pub-db0cd070a4f94dabb9b58161850d4868.r2.dev/heart-sounds/springer_sounds.zip"
         basename, archive_ext = os.path.basename(url).split(".")
 
         if download:
+            # The expectation is that the directory path/to/springer_sounds does not exist
             if not os.path.isdir(f"{self.dst}/{basename}"):
+                # Also the expectation is that the zip file does not exist, in order to download it
                 if not os.path.isfile(basename + "." + archive_ext):
                     download_url_to_file(url, f"{dst}/{basename}.{archive_ext}")
                     extract_zip(os.path.join(f"{dst}/{basename}.{archive_ext}"), to_path=dst)
                     os.remove(os.path.join(f"{dst}/{basename}.{archive_ext}"))
 
         walker = walk_files(self.dst, suffix=".csv", prefix=True, remove_suffix=True)
+
+        if in_memory:
+            for file_id in walker:
+                x, y = self._apply_transform(*self._load_file(file_id))
+
+                if framing:
+                    frames, labels = frame_signal(x, y, 1000, 2000)
+                    for frame, label in zip(frames, labels):
+                        self.data.append(self.Signal(frame, label))
+                    continue
+
+                self.data.append(self.Signal(x, y))
+
         self.walker = list(walker)
 
     def __getitem__(self, n) -> Any:
+        if self.in_memory:
+            return self.data[n]
+
         file_id = self.walker[n]
         try:
-            df = pd.read_csv(file_id + ".csv", skiprows=1, names=["Signals", "Labels"])
-            x = torch.tensor(df.loc[:, "Signals"].to_numpy(), dtype=torch.float32)
-            y = torch.tensor(df.loc[:, "Labels"].to_numpy(), dtype=torch.int64)
-
-            if self.transform is not None:
-                x = self.transform(x)
-                for t in self.transform.transforms:
-                    # Looks for the first resample transform, if there's any
-                    # to match the length of the new resampled signal.
-                    if isinstance(t, Resample):
-                        y = torch.round(t(y)).type(torch.int64) - 1
-                        break
-
-            if len(x.shape) == 1:
-                x = x.unsqueeze(1)
-            return x, y
-        except Exception:
+            x, y = self._load_file(file_id)
+            return self._apply_transform(x, y)
+        except RuntimeError:
             print(f"Error produced for file {os.path.basename(file_id) + '.csv'}")
 
     def __len__(self) -> int:
@@ -167,3 +177,24 @@ class DavidSpringerHSS(Dataset):
     @staticmethod
     def collate_fn(batch):
         return collate_fn(batch)
+
+    def _load_file(self, file_id: str) -> tuple[torch.Tensor, torch.Tensor]:
+        df = pd.read_csv(file_id + ".csv", skiprows=1, names=["Signals", "Labels"])
+        x = torch.tensor(df.loc[:, "Signals"].to_numpy(), dtype=torch.float32)
+        y = torch.tensor(df.loc[:, "Labels"].to_numpy(), dtype=torch.int64)
+        return x, y
+
+    def _apply_transform(self, x: torch.Tensor, y: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        if self.transform is not None:
+            x = self.transform(x)
+            for t in self.transform.transforms:
+                # Looks for the first resample transform, if there's any
+                # to match the length of the new resampled signal.
+                if isinstance(t, Resample):
+                    y = torch.round(t(y)).type(torch.int64) - 1
+                    break
+
+        if len(x.shape) == 1:
+            x = x.unsqueeze(1)
+
+        return x, y
