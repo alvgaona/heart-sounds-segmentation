@@ -29,10 +29,8 @@ black = "^23.7.0"
 flake8 = "^6.1.0"
 mypy = "^1.5.1"
 
-
 [tool.poetry.group.types.dependencies]
 pandas-stubs = "2.0.2.230605"
-
 
 [tool.poetry.group.test.dependencies]
 flake8-pyproject = "^1.2.3"
@@ -41,6 +39,13 @@ flake8-pyproject = "^1.2.3"
 name = "pytorch"
 url = "https://download.pytorch.org/whl/cu118"
 priority = "explicit"
+
+[tool.pytest.ini_options]
+log_cli = true
+log_cli_level = "DEBUG"
+env = [
+    "SSQ_GPU = 1"
+]
 
 [tool.flake8]
 max-line-length = 120

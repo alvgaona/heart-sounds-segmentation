@@ -43,7 +43,7 @@ def frame_signal(
         labels.append(y[i * stride : i * stride + n, :])
 
     if L <= 0:
-        frames.append(x[:, :n])
-        labels.append(y[:, n])
+        frames.append(x[:n, :])
+        labels.append(y[:n, :])
 
     return frames, labels

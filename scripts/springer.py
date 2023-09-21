@@ -1,3 +1,4 @@
+import datetime
 import math
 import os
 import time
@@ -18,7 +19,7 @@ from hss.utils.training import show_progress
 ROOT = os.path.dirname(os.path.dirname(__file__))
 
 if __name__ == "__main__":
-    torch.set_default_device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     transform = transforms.Compose(
         (
@@ -26,29 +27,33 @@ if __name__ == "__main__":
             FSST(
                 1000,
                 window=scipy.signal.get_window(("kaiser", 0.5), 128, fftbins=True),
-                truncate_freq=(25, 200),
+                truncate_freq=(25, 150),
                 stack=True,
             ),
         )
     )
 
-    hss_dataset = DavidSpringerHSS(os.path.join(ROOT, "resources/data"), download=True, transform=transform)
-    batch_size = 1
-    hss_loader = DataLoader(hss_dataset, batch_size=batch_size, shuffle=True, generator=torch.Generator(device="cuda"))
+    hss_dataset = DavidSpringerHSS(
+        os.path.join(ROOT, "resources/data"), download=True, framing=True, in_memory=True, transform=transform
+    )
+    batch_size = 54
+    hss_loader = DataLoader(hss_dataset, batch_size=batch_size, shuffle=False, generator=torch.Generator(device="cpu"))
 
-    model = HSSegmenter(input_size=180, batch_size=batch_size)
+    model = HSSegmenter(input_size=128, batch_size=batch_size, device=device)
     loss_fn = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-    scheduler = LambdaLR(optimizer, lr_lambda=[lambda epoch: 0.95**epoch])
+    scheduler = LambdaLR(optimizer, lr_lambda=[lambda epoch: 0.9**epoch])
 
-    mini_batch_size = 1
+    mini_batch_size = 50
     start_time = time.time()
-    for epoch in range(1, 20):
+    for epoch in range(1, 7):
         model.train()
         running_loss = 0.0
         total = 0.0
         correct = 0.0
         for i, (x, y) in enumerate(hss_loader, 1):
+            x = x.cuda()
+            y = y.cuda()
             iteration = i + (epoch - 1) * math.ceil(len(hss_dataset) / batch_size)
             optimizer.zero_grad()
             outputs = model(x)
@@ -61,7 +66,7 @@ if __name__ == "__main__":
             total += y.size(0) * y.size(1)
             correct += torch.sum(predicted == y).item()
 
-            if iteration % mini_batch_size == mini_batch_size - 1:
+            if iteration % mini_batch_size == 0:
                 show_progress(
                     epoch=epoch,
                     iteration=iteration,

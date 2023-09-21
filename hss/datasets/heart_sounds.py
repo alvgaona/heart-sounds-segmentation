@@ -10,6 +10,7 @@ from torch.hub import download_url_to_file
 from torch.utils.data import Dataset
 from torchaudio.datasets.utils import _extract_zip as extract_zip
 
+from hss.datasets import log
 from hss.transforms import Resample
 from hss.utils.files import walk_files
 from hss.utils.preprocess import frame_signal
@@ -115,8 +116,6 @@ class PhysionetChallenge2016(Dataset):
 
 
 class DavidSpringerHSS(Dataset):
-    Signal = namedtuple("Signal", ("x", "y"))
-
     def __init__(
         self,
         dst: str,
@@ -148,15 +147,17 @@ class DavidSpringerHSS(Dataset):
 
         if in_memory:
             for file_id in walker:
+                print(f"Processing file: {os.path.basename(file_id)}.csv")
                 x, y = self._apply_transform(*self._load_file(file_id))
 
                 if framing:
                     frames, labels = frame_signal(x, y, 1000, 2000)
-                    for frame, label in zip(frames, labels):
-                        self.data.append(self.Signal(frame, label))
+                    for i, (frame, label) in enumerate(zip(frames, labels)):
+                        print(f"Processing frame {i} for file {os.path.basename(file_id)}.csv")
+                        self.data.append((frame, label.squeeze(1)))
                     continue
 
-                self.data.append(self.Signal(x, y))
+                self.data.append((x, y))
 
         self.walker = list(walker)
 
@@ -172,7 +173,7 @@ class DavidSpringerHSS(Dataset):
             print(f"Error produced for file {os.path.basename(file_id) + '.csv'}")
 
     def __len__(self) -> int:
-        return len(self.walker)
+        return len(self.walker) or len(self.data)
 
     @staticmethod
     def collate_fn(batch):

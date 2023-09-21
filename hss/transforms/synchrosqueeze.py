@@ -52,6 +52,8 @@ class FSST:
             window=self.window,
         )
 
+        # TODO: Normalize FSST output
+
         if isinstance(fsst, np.ndarray):
             fsst = torch.tensor(fsst)
 
