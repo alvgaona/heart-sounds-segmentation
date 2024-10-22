@@ -1,6 +1,4 @@
-import datetime
 import math
-import os
 import time
 
 import scipy
@@ -15,8 +13,6 @@ from hss.model.segmenter import HSSegmenter
 from hss.transforms import FSST, Resample
 from hss.utils.training import show_progress
 
-
-ROOT = os.path.dirname(os.path.dirname(__file__))
 
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -33,9 +29,7 @@ if __name__ == "__main__":
         )
     )
 
-    hss_dataset = DavidSpringerHSS(
-        os.path.join(ROOT, "resources/data"), download=True, framing=True, in_memory=True, transform=transform
-    )
+    hss_dataset = DavidSpringerHSS("resources/data", download=True, framing=True, in_memory=True, transform=transform)
     batch_size = 54
     hss_loader = DataLoader(hss_dataset, batch_size=batch_size, shuffle=False, generator=torch.Generator(device="cpu"))
 

@@ -1,115 +1,75 @@
-[tool.poetry]
+[project]
 name = "heart-sounds-segmentation"
 version = "1.0.0"
 description = "Heart sounds segmentation based on LSTM neural network and Fourier Synchrosqueezed Transform."
-authors = ["Alvaro J. Gaona <alvgaona@gmail.com>"]
-license = "MIT"
+authors = [{ name = "Alvaro J. Gaona", email = "alvgaona@gmail.com" }]
+license = { file = "LICENSE" }
 readme = "README.md"
-packages = [{include = "hss"}]
+requires-python = ">=3.9,<3.12"
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+]
 
-[tool.poetry.dependencies]
-python = ">=3.9,<3.13"
-ssqueezepy = "^0.6.3"
-scipy = "^1.11.2"
-pandas = "^2.0.3"
-numba = "^0.57.1"
-cupy-cuda11x = "^12.2.0"
-torch = { version = "^2.0.1+cu118", source = "pytorch" }
-torchvision = { version = "^0.15.2+cu118", source = "pytorch" }
-torchaudio = { version = "^2.0.2+cu118", source = "pytorch" }
-sox = { version = "^1.4.1", platform = "linux" }
-soundfile = { version = "^0.12.1", platform = "win32" }
+[project.urls]
+Home = "https://github.com/alvgaona/heart-sounds-segmentation"
 
-[tool.poetry.group.dev.dependencies]
-pytest = "^7.4.0"
-matplotlib = "^3.7.2"
-plotly = "^5.16.1"
-isort = "^5.12.0"
-black = "^23.7.0"
-flake8 = "^6.1.0"
-mypy = "^1.5.1"
+[tool.pixi.project]
+channels = ["conda-forge", "pytorch"]
+platforms = ["linux-64", "win-64"]
 
-[tool.poetry.group.types.dependencies]
-pandas-stubs = "2.0.2.230605"
+[tool.pixi.project.pypi-options]
+extra-index-urls = [
+    "https://gitlab.com/api/v4/projects/62793076/packages/pypi/simple",
+]
 
-[tool.poetry.group.test.dependencies]
-flake8-pyproject = "^1.2.3"
+[tool.pixi.dependencies]
+scipy = "1.11.2"
+pandas = "2.0.3"
+numba = "0.57.1"
 
-[[tool.poetry.source]]
-name = "pytorch"
-url = "https://download.pytorch.org/whl/cu118"
-priority = "explicit"
+[tool.pixi.pypi-dependencies]
+sox = "*"
+soundfile = "*"
+torch = { url = "https://download.pytorch.org/whl/cu118/torch-2.5.0%2Bcu118-cp311-cp311-linux_x86_64.whl" }
+torchvision = { url = "https://download.pytorch.org/whl/cu118/torchvision-0.20.0%2Bcu118-cp311-cp311-linux_x86_64.whl" }
+torchaudio = { url = "https://download.pytorch.org/whl/cu118/torchaudio-2.5.0%2Bcu118-cp311-cp311-linux_x86_64.whl" }
+fsst = ">=0.1.0,<0.2"
+
+[tool.pixi.feature.dev.dependencies]
+pytest = "*"
+ruff = "*"
+matplotlib = ">=3.9.2,<4"
+pyright = ">=1.1.384,<2"
+
+[tool.pixi.environments]
+default = { features = [], solve-group = "default" }
+dev = { features = ["dev"], solve-group = "default" }
 
 [tool.pytest.ini_options]
+pythonpath = ["."]
 log_cli = true
 log_cli_level = "DEBUG"
-env = [
-    "SSQ_GPU = 1"
-]
 
-[tool.flake8]
-max-line-length = 120
-extend-ignore = [
-    "E203"
-]
-exclude = [
-    ".venv/"
-]
-
-[tool.black]
-target-version = ["py310", "py311"]
+[tool.ruff]
+target-version = "py311"
 line-length = 120
+exclude = [".pixi"]
 
-[tool.isort]
-profile = "hug"
-src_paths = "*"
-lines_after_imports = 2
-honor_noqa = "True"
-lines_between_sections = 1
+[tool.ruff.lint]
+select = ["E", "F", "B", "SIM", "I"]
+ignore = ["E741"]
 
-[tool.mypi]
-python_version = "3.11"
-cache_dir = ".mypy_cache/normal"
-allow_redefinition = true
-warn_unused_configs = true
-warn_redundant_casts = true
-show_error_codes = true
-show_column_numbers = true
-check_untyped_defs = true
-follow_imports = "silent"
+[tool.ruff.lint.isort]
+case-sensitive = true
+lines-after-imports = 2
 
-[[tool.mypy.overrides]]
-module = "numpy.*"
-ignore_missing_imports = true
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
 
-[[tool.mypy.overrides]]
-module = "scipy.*"
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = "ssqueezepy.*"
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = "torch.*"
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = "torchaudio.*"
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = "torchvision.*"
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = "plotly.*"
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = "matplotlib.*"
-ignore_missing_imports = true
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+[tool.pyright]
+venvPath = ".pixi/envs"
+venv = "dev"

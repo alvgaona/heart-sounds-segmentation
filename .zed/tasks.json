@@ -1,0 +1,20 @@
+[
+    {
+        "label": "Check and format code",
+        "command": "pixi run --environment dev ruff check --fix . && pixi run --environment dev ruff format .",
+        "use_new_terminal": false,
+        "allow_concurrent_runs": false,
+        "reveal": "always",
+        "hide": "on_success",
+        "shell": "system"
+    },
+    {
+        "label": "Run pytest",
+        "command": "pixi run --environment dev pytest",
+        "use_new_terminal": false,
+        "allow_concurrent_runs": false,
+        "reveal": "always",
+        "hide": "on_success",
+        "shell": "system"
+    }
+]

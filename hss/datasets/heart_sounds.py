@@ -1,5 +1,4 @@
 import os
-from collections import namedtuple
 from typing import Any, Optional
 
 import pandas as pd
@@ -10,7 +9,6 @@ from torch.hub import download_url_to_file
 from torch.utils.data import Dataset
 from torchaudio.datasets.utils import _extract_zip as extract_zip
 
-from hss.datasets import log
 from hss.transforms import Resample
 from hss.utils.files import walk_files
 from hss.utils.preprocess import frame_signal
@@ -75,11 +73,9 @@ class PhysionetChallenge2016(Dataset):
         folder_in_archive = basename
         self._path = os.path.join(root, folder_in_archive)
 
-        if download:
-            if not os.path.isdir(self._path):
-                if not os.path.isfile(archive):
-                    download_url_to_file(url + "?download", f"{root}/{archive}")
-                    extract_zip(archive, to_path=f"{root}/{basename}")
+        if download and not os.path.isdir(self._path) and not os.path.isfile(archive):
+            download_url_to_file(url + "?download", f"{root}/{archive}")
+            extract_zip(archive, to_path=f"{root}/{basename}")
 
         walker = walk_files(self._path, suffix=self._ext_audio, prefix=True, remove_suffix=True)
         self._walker = list(walker)
@@ -134,14 +130,19 @@ class DavidSpringerHSS(Dataset):
         url = "https://pub-db0cd070a4f94dabb9b58161850d4868.r2.dev/heart-sounds/springer_sounds.zip"
         basename, archive_ext = os.path.basename(url).split(".")
 
-        if download:
-            # The expectation is that the directory path/to/springer_sounds does not exist
-            if not os.path.isdir(f"{self.dst}/{basename}"):
-                # Also the expectation is that the zip file does not exist, in order to download it
-                if not os.path.isfile(basename + "." + archive_ext):
-                    download_url_to_file(url, f"{dst}/{basename}.{archive_ext}")
-                    extract_zip(os.path.join(f"{dst}/{basename}.{archive_ext}"), to_path=dst)
-                    os.remove(os.path.join(f"{dst}/{basename}.{archive_ext}"))
+        # The expectation is that the directory path/to/springer_sounds does not exist
+        # Also the expectation is that the zip file does not exist, in order to download it
+        if (
+            download
+            and not os.path.isdir(f"{self.dst}/{basename}")
+            and not os.path.isfile(basename + "." + archive_ext)
+        ):
+            download_url_to_file(url, f"{dst}/{basename}.{archive_ext}")
+            extract_zip(
+                os.path.join(f"{dst}/{basename}.{archive_ext}"),
+                to_path=dst,
+            )
+            os.remove(os.path.join(f"{dst}/{basename}.{archive_ext}"))
 
         walker = walk_files(self.dst, suffix=".csv", prefix=True, remove_suffix=True)
 
@@ -152,7 +153,7 @@ class DavidSpringerHSS(Dataset):
 
                 if framing:
                     frames, labels = frame_signal(x, y, 1000, 2000)
-                    for i, (frame, label) in enumerate(zip(frames, labels)):
+                    for i, (frame, label) in enumerate(zip(frames, labels, strict=False)):
                         print(f"Processing frame {i} for file {os.path.basename(file_id)}.csv")
                         self.data.append((frame, label.squeeze(1)))
                     continue

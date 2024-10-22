@@ -1,5 +1,3 @@
-import os
-
 import matplotlib.pyplot as plt
 import pandas as pd
 import scipy
@@ -9,11 +7,8 @@ from torchvision import transforms
 from hss.transforms import FSST, Resample
 
 
-ROOT = os.path.dirname(os.path.dirname(__file__))
-
-
 if __name__ == "__main__":
-    df = pd.read_csv("../resources/data/springer_sounds/0040.csv", skiprows=1, names=["Signals", "Labels"])
+    df = pd.read_csv("./resources/data/springer_sounds/0040.csv", skiprows=1, names=["Signals", "Labels"])
     x = torch.tensor(df.loc[:, "Signals"].to_numpy())
     y = torch.tensor(df.loc[:, "Labels"].to_numpy(), dtype=torch.int64)
 
@@ -23,17 +18,14 @@ if __name__ == "__main__":
     plt.plot(y)
     plt.xlabel("n [samples]")
     plt.ylabel("Amplitude")
-    plt.show()
 
     transform = transforms.Compose(
         (
             Resample(35500),
             FSST(
-                4000,
-                window=scipy.signal.get_window(("kaiser", 0.5), 128, fftbins=True),
-                truncate_freq=(25, 120),
+                1000,
+                window=scipy.signal.get_window(("kaiser", 0.5), 128, fftbins=False),
                 stack=False,
-                flipud=False,
             ),
         )
     )

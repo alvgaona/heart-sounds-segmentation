@@ -50,7 +50,7 @@ def show_progress(
     print("\r", end="")
 
     header_str = "|"
-    for header in table.keys():
+    for header in table:
         header_str += f" {header : ^5} |"
     if iteration == mini_batch_size:
         print("|" + "=" * (len(header_str) - 2) + "|")

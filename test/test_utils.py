@@ -11,7 +11,7 @@ def test_frame_1d_signal():
 
     assert len(frames) == 32
     assert len(labels) == 32
-    for f, l in zip(frames, labels):
+    for f, l in zip(frames, labels, strict=False):
         assert f.shape == torch.Size([2000, 1])
         assert l.shape == torch.Size([2000, 1])
 
@@ -24,6 +24,6 @@ def test_frame_n_dimensional_signal():
 
     assert len(frames) == 32
     assert len(labels) == 32
-    for f, l in zip(frames, labels):
+    for f, l in zip(frames, labels, strict=False):
         assert f.shape == torch.Size([2000, 2])
         assert l.shape == torch.Size([2000, 2])

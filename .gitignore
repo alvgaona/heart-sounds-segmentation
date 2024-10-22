@@ -1,6 +1,19 @@
-__pycache__/
 resources/
+
+# Pixi
+.pixi/
+
+# Python
+__pycache__/
 .pytest_cache/
+
+# Ruff
+.ruff_cache/
+
+# Zed
+.zed/*
+!.zed/settings.json
+!.zed/tasks.json
 
 # JetBrains
 .idea/
@@ -11,6 +24,7 @@ resources/
 # macOS
 .DS_Store
 
+# Other
 *.wav
 *.pkl
 *.csv

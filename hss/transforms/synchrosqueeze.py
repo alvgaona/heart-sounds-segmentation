@@ -1,8 +1,8 @@
 from typing import Optional
 
 import numpy as np
-import ssqueezepy as ssq
 import torch
+from fsst import fftsqueeze
 
 
 class FSST:
@@ -13,7 +13,6 @@ class FSST:
     def __init__(
         self,
         fs: float,
-        flipud: bool = False,
         window: Optional[np.ndarray] = None,
         abs: bool = False,
         stack: bool = False,
@@ -27,7 +26,6 @@ class FSST:
             stack (bool): true or false in order to stack or not the real and image parts of the spectrum.
                 Default: False
         """
-        self.flipud = flipud
         self.fs = fs
         self.window = window
         self.abs = abs
@@ -45,31 +43,32 @@ class FSST:
             Tuple: Original signal, STFT Synchrosqueezed Transform, STFT, and frequencies
 
         """
-        fsst, _, f, *_ = ssq.ssq_stft(
-            x.cpu(),
-            flipud=self.flipud,
-            fs=self.fs,
-            window=self.window,
-        )
+        s, f, t = fftsqueeze(x.cpu(), self.fs, self.window)
+        # fsst, _, f, *_ = ssq.ssq_stft(
+        #     x.cpu(),
+        #     flipud=self.flipud,
+        #     fs=self.fs,
+        #     window=self.window,
+        # )
 
         # TODO: Normalize FSST output
 
-        if isinstance(fsst, np.ndarray):
-            fsst = torch.tensor(fsst)
+        if isinstance(s, np.ndarray):
+            fsst = torch.tensor(s)
 
         if isinstance(f, np.ndarray):
             f = torch.tensor(f)
 
         if self.truncate_freq:
-            fsst, f = self._truncate_frequencies(fsst, f.contiguous())
+            fsst, f = self._truncate_frequencies(s, f.contiguous())
 
         if self.abs:
-            return torch.abs(fsst).t()
+            return torch.abs(s).t()
 
         if self.stack:
-            return self._stack_real_imag(fsst)
+            return self._stack_real_imag(s)
 
-        return fsst
+        return torch.tensor(s)
 
     def _stack_real_imag(self, s: torch.Tensor) -> torch.Tensor:
         """
