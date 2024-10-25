@@ -3,7 +3,7 @@ close all
 
 signalLen = 2000;
 
-[signals, labels, features] = loadInputData();
+[signals, labels] = loadInputCSV();
 lengthSignals = cellfun(@(x) length(x), signals);
 signals = signals(lengthSignals >= signalLen);
 labels = labels(lengthSignals >= signalLen);
