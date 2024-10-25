@@ -44,12 +44,7 @@ class FSST:
 
         """
         s, f, t = fftsqueeze(x.cpu(), self.fs, self.window)
-        # fsst, _, f, *_ = ssq.ssq_stft(
-        #     x.cpu(),
-        #     flipud=self.flipud,
-        #     fs=self.fs,
-        #     window=self.window,
-        # )
+        s, f, t = torch.tensor(s), torch.tensor(f), torch.tensor(t)
 
         # TODO: Normalize FSST output
 
@@ -68,7 +63,7 @@ class FSST:
         if self.stack:
             return self._stack_real_imag(s)
 
-        return torch.tensor(s)
+        return s
 
     def _stack_real_imag(self, s: torch.Tensor) -> torch.Tensor:
         """

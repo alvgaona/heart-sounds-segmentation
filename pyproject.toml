@@ -28,6 +28,7 @@ extra-index-urls = [
 scipy = "1.11.2"
 pandas = "2.0.3"
 numba = "0.57.1"
+rich = ">=13.9.3,<14"
 
 [tool.pixi.pypi-dependencies]
 sox = "*"

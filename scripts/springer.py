@@ -11,7 +11,7 @@ from torchvision import transforms
 from hss.datasets.heart_sounds import DavidSpringerHSS
 from hss.model.segmenter import HSSegmenter
 from hss.transforms import FSST, Resample
-from hss.utils.training import show_progress
+from hss.utils.training import ProgressTracker
 
 
 if __name__ == "__main__":
@@ -22,7 +22,7 @@ if __name__ == "__main__":
             Resample(35500),
             FSST(
                 1000,
-                window=scipy.signal.get_window(("kaiser", 0.5), 128, fftbins=True),
+                window=scipy.signal.get_window(("kaiser", 0.5), 128, fftbins=False),
                 truncate_freq=(25, 150),
                 stack=True,
             ),
@@ -30,7 +30,7 @@ if __name__ == "__main__":
     )
 
     hss_dataset = DavidSpringerHSS("resources/data", download=True, framing=True, in_memory=True, transform=transform)
-    batch_size = 54
+    batch_size = 5
     hss_loader = DataLoader(hss_dataset, batch_size=batch_size, shuffle=False, generator=torch.Generator(device="cpu"))
 
     model = HSSegmenter(input_size=128, batch_size=batch_size, device=device)
@@ -38,7 +38,9 @@ if __name__ == "__main__":
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
     scheduler = LambdaLR(optimizer, lr_lambda=[lambda epoch: 0.9**epoch])
 
-    mini_batch_size = 50
+    progress_tracker = ProgressTracker()
+
+    mini_batch_size = 5
     start_time = time.time()
     for epoch in range(1, 7):
         model.train()
@@ -61,7 +63,7 @@ if __name__ == "__main__":
             correct += torch.sum(predicted == y).item()
 
             if iteration % mini_batch_size == 0:
-                show_progress(
+                progress_tracker.show_progress(
                     epoch=epoch,
                     iteration=iteration,
                     time_elapsed=time.time() - start_time,
