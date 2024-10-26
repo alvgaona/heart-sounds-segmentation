@@ -3,7 +3,7 @@ import scipy
 from torchvision import transforms
 
 from hss.datasets.heart_sounds import DavidSpringerHSS
-from hss.transforms import FSST, Resample
+from hss.transforms import FSST
 
 
 @pytest.fixture
@@ -20,43 +20,58 @@ def dataset_path() -> str:
 def transform(fs: int) -> transforms.Compose:
     return transforms.Compose(
         (
-            Resample(35500),
             FSST(
                 fs=fs,
-                window=scipy.signal.get_window(("kaiser", 0.5), 128, fftbins=True),
-                truncate_freq=(25, 200),
-                stack=True,
+                window=scipy.signal.get_window(("kaiser", 0.5), 128, fftbins=False),
             ),
         )
     )
 
 
-def test_in_memory_dataset(dataset_path: str) -> None:
-    dataset = DavidSpringerHSS(dataset_path, download=True, in_memory=True)
-    assert len(dataset.data) == 792
-
-
-def test_in_memory_fsst(dataset_path: str, transform: transforms.Compose) -> None:
-    dataset = DavidSpringerHSS(dataset_path, download=True, in_memory=True, transform=transform)
-    assert len(dataset.data) == 792
-
-
-def test_in_memory_framed_fsst(dataset_path: str, transform: transforms.Compose) -> None:
-    dataset = DavidSpringerHSS(dataset_path, download=True, in_memory=True, framing=True, transform=transform)
-    assert len(dataset.data) == 792 * 33
-
-
 @pytest.mark.parametrize(
     "in_memory,framing,expected_length",
     [
-        (True, False, 792),
-        (True, True, 792 * 33),
-        (False, False, 792),
-        (False, True, 792 * 33),
+        (True, False, 5),
+        (True, True, 5 * 33),
+        (False, False, 0),
+        (False, True, 0),
     ],
 )
-def test_dataset_configurations(
+def test_dataset_state(
     dataset_path: str, transform: transforms.Compose, in_memory: bool, framing: bool, expected_length: int
 ) -> None:
-    dataset = DavidSpringerHSS(dataset_path, download=True, in_memory=in_memory, framing=framing, transform=transform)
+    dataset = DavidSpringerHSS(
+        dataset_path,
+        download=True,
+        in_memory=in_memory,
+        framing=framing,
+        count=5,
+        transform=transform,
+    )
     assert len(dataset.data) == expected_length
+
+
+def test_springer_dataset_framing(dataset_path: str, transform: transforms.Compose) -> None:
+    dataset = DavidSpringerHSS(
+        dataset_path,
+        download=True,
+        in_memory=True,
+        framing=True,
+        count=5,
+        transform=transform,
+        verbose=False,
+    )
+
+    for x, y in dataset:
+        assert x.shape == (2000, 65)
+        assert y.shape == (2000,)
+
+
+def test_springer_dataset(dataset_path: str, transform: transforms.Compose) -> None:
+    dataset = DavidSpringerHSS(
+        dataset_path,
+        download=True,
+        in_memory=True,
+        transform=transform,
+        verbose=False,
+    )

@@ -1,4 +1,5 @@
 import os
+from itertools import islice
 from typing import Any, Optional
 
 import pandas as pd
@@ -118,8 +119,12 @@ class DavidSpringerHSS(Dataset):
         download: bool = False,
         in_memory: bool = False,
         framing: bool = False,
+        stride: int = 1000,
+        frame_len: int = 2000,
+        count: Optional[int] = None,
         transform: Optional[torchvision.transforms.Compose] = None,
         dtype: torch.dtype = torch.float32,
+        verbose: bool = True,
     ) -> None:
         self.dst = dst
         self.transform = transform
@@ -147,14 +152,18 @@ class DavidSpringerHSS(Dataset):
         walker = walk_files(self.dst, suffix=".csv", prefix=True, remove_suffix=True)
 
         if in_memory:
-            for file_id in walker:
-                print(f"Processing file: {os.path.basename(file_id)}.csv")
+            for file_id in walker if not count else islice(walker, count):
+                if verbose:
+                    print(f"Processing file: {os.path.basename(file_id)}.csv")
                 x, y = self._apply_transform(*self._load_file(file_id))
 
+                print(x.shape)
+
                 if framing:
-                    frames, labels = frame_signal(x, y, 1000, 2000)
+                    frames, labels = frame_signal(x.t(), y, stride, frame_len)
                     for i, (frame, label) in enumerate(zip(frames, labels, strict=False)):
-                        print(f"Processing frame {i} for file {os.path.basename(file_id)}.csv")
+                        if verbose:
+                            print(f"Processing frame {i} for file {os.path.basename(file_id)}.csv")
                         self.data.append((frame, label.squeeze(1)))
                     continue
 

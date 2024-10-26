@@ -1,5 +1,5 @@
 import os
-from typing import Iterable, Tuple, Union
+from typing import Generator, Tuple, Union
 
 
 def walk_files(
@@ -7,7 +7,7 @@ def walk_files(
     suffix: Union[str, Tuple[str]],
     prefix: bool = False,
     remove_suffix: bool = False,
-) -> Iterable[str]:
+) -> Generator[str, None, None]:
     """List recursively all files ending with a suffix at a given root
     Args:
         root (str): Path to directory whose folders need to be listed
