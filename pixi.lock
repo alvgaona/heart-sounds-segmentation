@@ -52,6 +52,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/fonts-conda-forge-1-0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/linux-64/fonttools-4.54.1-py311h2dc5d0c_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/freetype-2.12.1-h267a509_2.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/fsspec-2024.10.0-pyhff2d567_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/gettext-0.22.5-he02047a_3.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/gettext-tools-0.22.5-he02047a_3.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/gmp-6.3.0-hac33072_2.conda
@@ -139,6 +140,8 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libxml2-2.12.7-he7c6b58_4.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libxslt-1.1.39-h76b75d6_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libzlib-1.3.1-hb9d3cd8_2.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/lightning-2.4.0-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/lightning-utilities-0.11.8-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/llvm-openmp-15.0.7-h0cdce71_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/llvmlite-0.40.1-py311ha6695c7_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/markdown-it-py-3.0.0-pyhd8ed1ab_0.conda
@@ -185,6 +188,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/python_abi-3.11-5_cp311.conda
       - conda: https://conda.anaconda.org/pytorch/linux-64/pytorch-2.4.1-py3.11_cuda12.1_cudnn9.1.0_0.tar.bz2
       - conda: https://conda.anaconda.org/pytorch/linux-64/pytorch-cuda-12.1-ha16c6d3_6.tar.bz2
+      - conda: https://conda.anaconda.org/conda-forge/noarch/pytorch-lightning-2.4.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/pytorch/noarch/pytorch-mutex-1.0-cuda.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/pytz-2024.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pyyaml-6.0.2-py311h9ecbd09_1.conda
@@ -203,9 +207,12 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/tk-8.6.13-noxft_h4845f30_101.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomli-2.0.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/pytorch/linux-64/torchaudio-2.4.1-py311_cu121.tar.bz2
+      - conda: https://conda.anaconda.org/conda-forge/noarch/torchmetrics-1.5.1-pyhe5570ce_0.conda
       - conda: https://conda.anaconda.org/pytorch/linux-64/torchtriton-3.0.0-py311.tar.bz2
       - conda: https://conda.anaconda.org/pytorch/linux-64/torchvision-0.19.1-py311_cu121.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/linux-64/tornado-6.4.1-py311h9ecbd09_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.66.5-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/typing-extensions-4.12.2-hd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.12.2-pyha770c72_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2024b-hc8b5060_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/unicodedata2-15.1.0-py311h9ecbd09_1.conda
@@ -973,6 +980,23 @@ packages:
   purls: []
   size: 634972
   timestamp: 1694615932610
+- kind: conda
+  name: fsspec
+  version: 2024.10.0
+  build: pyhff2d567_0
+  subdir: noarch
+  noarch: python
+  url: https://conda.anaconda.org/conda-forge/noarch/fsspec-2024.10.0-pyhff2d567_0.conda
+  sha256: 40bb76981dd49d5869b48925a8975bb7bbe4e33e1e40af4ec06f6bf4a62effd7
+  md5: 816dbc4679a64e4417cd1385d661bb31
+  depends:
+  - python >=3.8
+  license: BSD-3-Clause
+  license_family: BSD
+  purls:
+  - pkg:pypi/fsspec?source=conda-forge-mapping
+  size: 134745
+  timestamp: 1729608972363
 - kind: pypi
   name: fsst
   version: 0.1.0
@@ -2476,6 +2500,52 @@ packages:
   size: 60963
   timestamp: 1727963148474
 - kind: conda
+  name: lightning
+  version: 2.4.0
+  build: pyhd8ed1ab_0
+  subdir: noarch
+  noarch: python
+  url: https://conda.anaconda.org/conda-forge/noarch/lightning-2.4.0-pyhd8ed1ab_0.conda
+  sha256: 6f18380462e5f11cee138ebb6906ef1f892e61d16df3b9c8cdcf725457f71bff
+  md5: 7ded5c963091589124cdd9a8a30e78ac
+  depends:
+  - fsspec <2026.0,>=2022.5.0
+  - lightning-utilities <2.0,>=0.10.0
+  - packaging <25.0,>=20.0
+  - python >=3.9
+  - pytorch <4.0,>=2.1.0
+  - pytorch-lightning
+  - pyyaml <8.0,>=5.4
+  - torchmetrics <3.0,>=0.7.0
+  - tqdm <6.0,>=4.57.0
+  - typing-extensions <6.0,>=4.4.0
+  license: Apache-2.0
+  license_family: APACHE
+  purls:
+  - pkg:pypi/lightning?source=conda-forge-mapping
+  size: 445601
+  timestamp: 1723066121699
+- kind: conda
+  name: lightning-utilities
+  version: 0.11.8
+  build: pyhd8ed1ab_0
+  subdir: noarch
+  noarch: python
+  url: https://conda.anaconda.org/conda-forge/noarch/lightning-utilities-0.11.8-pyhd8ed1ab_0.conda
+  sha256: 7f35e56237c1653181e646edbfe2ea59c2c465f5eb37e4e55a8c0f3daf471ba2
+  md5: 5a1505111d16be1750130fcfe6ad423a
+  depends:
+  - packaging >=17.1
+  - python >=3.8
+  - setuptools
+  - typing_extensions
+  license: Apache-2.0
+  license_family: APACHE
+  purls:
+  - pkg:pypi/lightning-utilities?source=conda-forge-mapping
+  size: 27534
+  timestamp: 1729059911634
+- kind: conda
   name: llvm-openmp
   version: 15.0.7
   build: h0cdce71_0
@@ -3385,7 +3455,8 @@ packages:
   - cpuonly <0
   license: BSD 3-Clause
   license_family: BSD
-  purls: []
+  purls:
+  - pkg:pypi/torch?source=conda-forge-mapping
   size: 1447739017
   timestamp: 1724797645811
 - kind: conda
@@ -3414,6 +3485,35 @@ packages:
   purls: []
   size: 7188
   timestamp: 1713891891439
+- kind: conda
+  name: pytorch-lightning
+  version: 2.4.0
+  build: pyhd8ed1ab_0
+  subdir: noarch
+  noarch: python
+  url: https://conda.anaconda.org/conda-forge/noarch/pytorch-lightning-2.4.0-pyhd8ed1ab_0.conda
+  sha256: 21dbbe7948cdf83ceda2cce480bd87be372d31f3a4d13f60c79bcc12b6c4c422
+  md5: 8fd18f4bb7f0ba0386138bee3806403d
+  depends:
+  - fsspec >2021.06.0
+  - fsspec >=2022.5.0
+  - lightning-utilities >=0.10.0
+  - numpy >=1.17.2
+  - packaging >=20.0
+  - python >=3.8
+  - pytorch >=2.1.0
+  - pyyaml >=5.4
+  - requests
+  - torchmetrics >=0.7.0
+  - tqdm >=4.57.0
+  - typing-extensions >=4.4.0
+  - typing_extensions >=4.0.0
+  license: Apache-2.0
+  license_family: APACHE
+  purls:
+  - pkg:pypi/pytorch-lightning?source=conda-forge-mapping
+  size: 444323
+  timestamp: 1723045444285
 - kind: conda
   name: pytorch-mutex
   version: '1.0'
@@ -3825,9 +3925,33 @@ packages:
   constrains:
   - cpuonly <0
   license: BSD
-  purls: []
+  purls:
+  - pkg:pypi/torchaudio?source=conda-forge-mapping
   size: 6674068
   timestamp: 1724849903050
+- kind: conda
+  name: torchmetrics
+  version: 1.5.1
+  build: pyhe5570ce_0
+  subdir: noarch
+  noarch: python
+  url: https://conda.anaconda.org/conda-forge/noarch/torchmetrics-1.5.1-pyhe5570ce_0.conda
+  sha256: 876a671fd2170aef46e50d63d74afe61c5d77d527e3c6fa7a56fba13760606aa
+  md5: b4b7cd5fb30a48f6933b2b67304f17f0
+  depends:
+  - lightning-utilities >=0.8.0
+  - numpy >1.20.0
+  - packaging >17.1
+  - python >=3.8
+  - pytorch >=1.10.0
+  - setuptools
+  - typing_extensions
+  license: Apache-2.0
+  license_family: APACHE
+  purls:
+  - pkg:pypi/torchmetrics?source=conda-forge-mapping
+  size: 359288
+  timestamp: 1729774575472
 - kind: conda
   name: torchtriton
   version: 3.0.0
@@ -3868,7 +3992,8 @@ packages:
   constrains:
   - cpuonly <0
   license: BSD
-  purls: []
+  purls:
+  - pkg:pypi/torchvision?source=conda-forge-mapping
   size: 8939150
   timestamp: 1724848866963
 - kind: conda
@@ -3891,6 +4016,39 @@ packages:
   - pkg:pypi/tornado?source=conda-forge-mapping
   size: 856725
   timestamp: 1724956239832
+- kind: conda
+  name: tqdm
+  version: 4.66.5
+  build: pyhd8ed1ab_0
+  subdir: noarch
+  noarch: python
+  url: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.66.5-pyhd8ed1ab_0.conda
+  sha256: f2384902cef72048b0e9bad5c03d7a843de02ba6bc8618a9ecab6ff81a131312
+  md5: c6e94fc2b2ec71ea33fe7c7da259acb4
+  depends:
+  - colorama
+  - python >=3.7
+  license: MPL-2.0 or MIT
+  purls:
+  - pkg:pypi/tqdm?source=conda-forge-mapping
+  size: 89519
+  timestamp: 1722737568509
+- kind: conda
+  name: typing-extensions
+  version: 4.12.2
+  build: hd8ed1ab_0
+  subdir: noarch
+  noarch: python
+  url: https://conda.anaconda.org/conda-forge/noarch/typing-extensions-4.12.2-hd8ed1ab_0.conda
+  sha256: d3b9a8ed6da7c9f9553c5fd8a4fca9c3e0ab712fa5f497859f82337d67533b73
+  md5: 52d648bd608f5737b123f510bb5514b5
+  depends:
+  - typing_extensions 4.12.2 pyha770c72_0
+  license: PSF-2.0
+  license_family: PSF
+  purls: []
+  size: 10097
+  timestamp: 1717802659025
 - kind: conda
   name: typing_extensions
   version: 4.12.2

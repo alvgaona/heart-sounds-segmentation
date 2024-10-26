@@ -44,10 +44,10 @@ class HSSegmenter(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         output, (hn, cn) = self.lstm_1(x, (self.h0, self.c0))
-        output = self.dropout(output)
         output = self.relu(output)
+        output = self.dropout(output)
         output, _ = self.lstm_2(output, (hn, cn))
-        output = self.dropout(output)
         output = self.relu(output)
+        output = self.dropout(output)
         output = self.linear(output)
         return self.softmax(output)

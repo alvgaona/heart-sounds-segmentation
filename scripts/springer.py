@@ -1,6 +1,4 @@
-import math
-import time
-
+import pytorch_lightning as pl
 import scipy
 import torch
 from torch import nn
@@ -11,7 +9,47 @@ from torchvision import transforms
 from hss.datasets.heart_sounds import DavidSpringerHSS
 from hss.model.segmenter import HSSegmenter
 from hss.transforms import FSST
-from hss.utils.training import ProgressTracker
+
+
+torch.set_float32_matmul_precision("high")
+
+
+class HSSegmenterModule(pl.LightningModule):
+    def __init__(self, input_size, batch_size, device):
+        super().__init__()
+        self.model = HSSegmenter(input_size=input_size, batch_size=batch_size, device=device)
+        self.loss_fn = nn.CrossEntropyLoss()
+        self.batch_size = batch_size
+
+    def forward(self, x):
+        return self.model(x.to(torch.float32))
+
+    def training_step(self, batch, batch_idx):
+        x, y = batch
+        outputs = self(x)
+        loss = self.loss_fn(outputs.permute((0, 2, 1)), y)
+
+        predicted = torch.max(outputs, dim=2).indices
+        acc = torch.sum(predicted == y).item() / (y.size(0) * y.size(1))
+
+        self.log_dict({"train_loss": loss, "train_acc": acc})
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        x, y = batch
+        outputs = self(x)
+        loss = self.loss_fn(outputs.permute((0, 2, 1)), y)
+
+        predicted = torch.max(outputs, dim=2).indices
+        acc = torch.sum(predicted == y).item() / (y.size(0) * y.size(1))
+
+        self.log_dict({"val_loss": loss, "val_acc": acc})
+        return loss
+
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.parameters(), lr=0.01)
+        scheduler = LambdaLR(optimizer, lr_lambda=lambda epoch: 0.9**epoch)
+        return {"optimizer": optimizer, "lr_scheduler": scheduler}
 
 
 def main() -> None:
@@ -54,6 +92,7 @@ def main() -> None:
         batch_size=batch_size,
         shuffle=True,
         generator=torch.Generator(device="cpu"),
+        num_workers=19,
     )
 
     val_loader = DataLoader(
@@ -61,6 +100,7 @@ def main() -> None:
         batch_size=batch_size,
         shuffle=False,
         generator=torch.Generator(device="cpu"),
+        num_workers=19,
     )
 
     eval_loader = DataLoader(
@@ -68,80 +108,12 @@ def main() -> None:
         batch_size=batch_size,
         shuffle=False,
         generator=torch.Generator(device="cpu"),
+        num_workers=19,
     )
 
-    model = HSSegmenter(input_size=44, batch_size=batch_size, device=device)
-    loss_fn = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-    scheduler = LambdaLR(optimizer, lr_lambda=[lambda epoch: 0.9**epoch])
-
-    progress_tracker = ProgressTracker()
-
-    mini_batch_size = 5
-    start_time = time.time()
-    for epoch in range(1, 7):
-        model.train()
-        running_loss = 0.0
-        total = 0.0
-        correct = 0.0
-
-        # Training loop
-        for i, (x, y) in enumerate(train_loader, 1):
-            x = x.cuda().to(torch.float32)
-            y = y.cuda()
-            iteration = i + (epoch - 1) * math.ceil(len(train_dataset) / batch_size)
-
-            optimizer.zero_grad()
-            outputs = model(x)
-
-            loss = loss_fn(outputs.permute((0, 2, 1)), y)
-            loss.backward()
-            optimizer.step()
-
-            running_loss += loss.item()
-            predicted = torch.max(outputs, dim=2).indices
-            total += y.size(0) * y.size(1)
-            correct += torch.sum(predicted == y).item()
-
-            if iteration % mini_batch_size == 0:
-                progress_tracker.show_progress(
-                    epoch=epoch,
-                    iteration=iteration,
-                    time_elapsed=time.time() - start_time,
-                    mini_batch_size=mini_batch_size,
-                    mini_batch_acc=correct / total,
-                    mini_batch_loss=running_loss / mini_batch_size,
-                    learning_rate=scheduler.get_last_lr()[0],
-                )
-                running_loss = 0.0
-                total = 0
-                correct = 0
-
-        # Validation loop
-        model.eval()
-        val_loss = 0.0
-        val_total = 0.0
-        val_correct = 0.0
-
-        with torch.no_grad():
-            for x, y in val_loader:
-                x = x.cuda().to(torch.float32)
-                y = y.cuda()
-
-                outputs = model(x)
-                loss = loss_fn(outputs.permute((0, 2, 1)), y)
-
-                val_loss += loss.item()
-                predicted = torch.max(outputs, dim=2).indices
-                val_total += y.size(0) * y.size(1)
-                val_correct += torch.sum(predicted == y).item()
-
-        val_accuracy = val_correct / val_total
-        val_loss = val_loss / len(val_loader)
-
-        print(f"Epoch {epoch} Validation - Loss: {val_loss:.4f}, Accuracy: {val_accuracy:.4f}")
-
-        scheduler.step()
+    model = HSSegmenterModule(input_size=44, batch_size=batch_size, device=device)
+    trainer = pl.Trainer(max_epochs=6, accelerator="gpu" if torch.cuda.is_available() else "cpu")
+    trainer.fit(model, train_loader, val_loader)
 
 
 if __name__ == "__main__":
