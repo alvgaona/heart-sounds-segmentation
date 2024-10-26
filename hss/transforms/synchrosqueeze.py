@@ -44,9 +44,8 @@ class FSST:
 
         """
         s, f, t = fftsqueeze(x.cpu(), self.fs, self.window)
-        s, f, t = torch.tensor(s), torch.tensor(f), torch.tensor(t)
 
-        # TODO: Normalize FSST output
+        s, f, t = torch.tensor(s), torch.tensor(f), torch.tensor(t)
 
         if self.truncate_freq:
             s, f = self._truncate_frequencies(s, f.contiguous())
@@ -69,18 +68,19 @@ class FSST:
         Return:
             (torch.Tensor): the output will be the real and image values stacked on each other for each frequency.
         """
-        s = torch.t(s)
+        # Calculate separate means and stds for real and imaginary parts
+        real_mean = torch.mean(s.real)
+        real_std = torch.std(s.real)
+        imag_mean = torch.mean(s.imag)
+        imag_std = torch.std(s.imag)
 
-        z = torch.zeros((s.shape[0], s.shape[1] * (2 if self.stack else 1)))
+        # Normalize real and imaginary parts separately
+        real_part = (s.real - real_mean) / real_std
+        imag_part = (s.imag - imag_mean) / imag_std
 
-        for j in range(0, s.shape[1], 2):
-            r = s[:, j].real
-            i = s[:, j].imag
+        z = torch.cat([real_part, imag_part], dim=0)
 
-            z[:, j] = (r - torch.mean(r)) / torch.std(r, unbiased=True)
-            z[:, j + 1] = (i - torch.mean(i)) / torch.std(i, unbiased=True)
-
-        return z
+        return z.t()
 
     def _truncate_frequencies(self, s: torch.Tensor, f: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """Truncate frequencies outside specified range.

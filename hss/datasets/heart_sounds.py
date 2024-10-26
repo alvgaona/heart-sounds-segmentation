@@ -161,12 +161,10 @@ class DavidSpringerHSS(Dataset):
                     continue
 
                 if framing:
-                    frames, labels = frame_signal(x, y, stride, frame_len)
+                    frames, labels = frame_signal(x, y - 1, stride, frame_len)
 
-                    for i, (frame, label) in enumerate(zip(frames, labels, strict=False)):
+                    for _, (frame, label) in enumerate(zip(frames, labels, strict=False)):
                         frame_i, label_i = self._apply_transform(frame, label)
-                        # if verbose:
-                        # print(f"Processing frame {i} for file {os.path.basename(file_id)}.csv")
                         self.data.append((frame_i, label_i.squeeze(1)))
                     continue
 

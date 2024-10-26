@@ -3,7 +3,8 @@ import scipy
 import torch
 from torchvision import transforms
 
-from hss.transforms import FSST, Resample
+from hss.transforms.synchrosqueeze import FSST
+from hss.utils.preprocess import frame_signal
 
 
 if __name__ == "__main__":
@@ -11,32 +12,17 @@ if __name__ == "__main__":
     x = torch.tensor(df.loc[:, "Signals"].to_numpy())
     y = torch.tensor(df.loc[:, "Labels"].to_numpy(), dtype=torch.int64)
 
-    # plt.figure("PCG")
-    # plt.title("PCG Signal")
-    # plt.plot(x)
-    # plt.plot(y)
-    # plt.xlabel("n [samples]")
-    # plt.ylabel("Amplitude")
+    frames, labels = frame_signal(x, y, 1000, 2000)
 
     transform = transforms.Compose(
         (
-            Resample(35500),
             FSST(
                 1000,
                 window=scipy.signal.get_window(("kaiser", 0.5), 128, fftbins=False),
-                stack=False,
+                stack=True,
+                truncate_freq=(25, 200),
             ),
         )
     )
 
-    s = transform(x).cpu().squeeze(0)
-
-    print(s.shape)
-    print(s)
-
-    # plt.figure("FSST")
-    # plt.title("Synchrosqueezed Short-time Fourier Transform")
-    # plt.imshow(torch.abs(s), cmap="jet", aspect="auto", vmin=0, vmax=1, origin="lower")
-    # plt.xlabel("n [samples]")
-    # plt.ylabel("frequencies")
-    # plt.show()
+    s = transform(frames[0]).cpu().squeeze(0)

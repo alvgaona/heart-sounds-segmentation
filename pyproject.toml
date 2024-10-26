@@ -16,8 +16,8 @@ classifiers = [
 Home = "https://github.com/alvgaona/heart-sounds-segmentation"
 
 [tool.pixi.project]
-channels = ["conda-forge", "pytorch"]
-platforms = ["linux-64", "win-64"]
+channels = ["nvidia", "conda-forge", "pytorch"]
+platforms = ["linux-64"]
 
 [tool.pixi.project.pypi-options]
 extra-index-urls = [
@@ -25,28 +25,31 @@ extra-index-urls = [
 ]
 
 [tool.pixi.dependencies]
+python = { version = ">=3.9,<3.12", channel = "conda-forge" }
 scipy = "1.11.2"
 pandas = "2.0.3"
 numba = "0.57.1"
 rich = ">=13.9.3,<14"
-
-[tool.pixi.pypi-dependencies]
-sox = "*"
-soundfile = "*"
-torch = { url = "https://download.pytorch.org/whl/cu118/torch-2.5.0%2Bcu118-cp311-cp311-linux_x86_64.whl" }
-torchvision = { url = "https://download.pytorch.org/whl/cu118/torchvision-0.20.0%2Bcu118-cp311-cp311-linux_x86_64.whl" }
-torchaudio = { url = "https://download.pytorch.org/whl/cu118/torchaudio-2.5.0%2Bcu118-cp311-cp311-linux_x86_64.whl" }
-fsst = ">=0.1.0,<0.2"
-
-[tool.pixi.feature.dev.dependencies]
 pytest = "*"
 ruff = "*"
 matplotlib = ">=3.9.2,<4"
 pyright = ">=1.1.384,<2"
+pytorch = { version = ">=2.4.1,<3", channel = "pytorch" }
+torchvision = { version = ">=0.19.1,<0.20", channel = "pytorch" }
+torchaudio = { version = ">=2.4.1,<3", channel = "pytorch" }
+pytorch-cuda = "12.1.*"
+
+
+[tool.pixi.pypi-dependencies]
+sox = "*"
+soundfile = "*"
+# torch = { url = "https://download.pytorch.org/whl/cu118/torch-2.4.1%2Bcu118-cp311-cp311-linux_x86_64.whl" }
+# torchvision = { url = "https://download.pytorch.org/whl/cu118/torchvision-0.19.1%2Bcu118-cp311-cp311-linux_x86_64.whl" }
+# torchaudio = { url = "https://download.pytorch.org/whl/cu118/torchaudio-2.4.1%2Bcu118-cp311-cp311-linux_x86_64.whl" }
+fsst = ">=0.1.0,<0.2"
 
 [tool.pixi.environments]
 default = { features = [], solve-group = "default" }
-dev = { features = ["dev"], solve-group = "default" }
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
@@ -73,4 +76,4 @@ docstring-code-format = true
 
 [tool.pyright]
 venvPath = ".pixi/envs"
-venv = "dev"
+venv = "default"

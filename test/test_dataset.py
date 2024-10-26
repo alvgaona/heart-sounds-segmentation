@@ -79,7 +79,3 @@ def test_springer_dataset(dataset_path: str, transform: transforms.Compose) -> N
         transform=transform,
         verbose=True,
     )
-
-    x, y = dataset.__getitem__(0)
-
-    print(x)

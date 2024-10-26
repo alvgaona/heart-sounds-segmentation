@@ -14,12 +14,11 @@ from hss.transforms import FSST
 from hss.utils.training import ProgressTracker
 
 
-if __name__ == "__main__":
+def main() -> None:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     transform = transforms.Compose(
         (
-            # Resample(35500),
             FSST(
                 1000,
                 window=scipy.signal.get_window(("kaiser", 0.5), 128, fftbins=False),
@@ -29,11 +28,47 @@ if __name__ == "__main__":
         )
     )
 
+    # Create full dataset
     hss_dataset = DavidSpringerHSS(
-        "resources/data", download=True, framing=True, in_memory=True, count=10, transform=transform
+        "resources/data",
+        download=True,
+        framing=True,
+        in_memory=True,
+        transform=transform,
     )
-    batch_size = 5
-    hss_loader = DataLoader(hss_dataset, batch_size=batch_size, shuffle=False, generator=torch.Generator(device="cpu"))
+
+    # Split into train, val, eval sets
+    total_size = len(hss_dataset)
+    train_size = int(0.7 * total_size)
+    val_size = int(0.15 * total_size)
+    eval_size = total_size - train_size - val_size
+
+    train_dataset, val_dataset, eval_dataset = torch.utils.data.random_split(
+        hss_dataset, [train_size, val_size, eval_size], generator=torch.Generator(device="cpu")
+    )
+
+    batch_size = 1
+
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        generator=torch.Generator(device="cpu"),
+    )
+
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        generator=torch.Generator(device="cpu"),
+    )
+
+    eval_loader = DataLoader(
+        eval_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        generator=torch.Generator(device="cpu"),
+    )
 
     model = HSSegmenter(input_size=44, batch_size=batch_size, device=device)
     loss_fn = nn.CrossEntropyLoss()
@@ -49,10 +84,12 @@ if __name__ == "__main__":
         running_loss = 0.0
         total = 0.0
         correct = 0.0
-        for i, (x, y) in enumerate(hss_loader, 1):
-            x = x.cuda()
+
+        # Training loop
+        for i, (x, y) in enumerate(train_loader, 1):
+            x = x.cuda().to(torch.float32)
             y = y.cuda()
-            iteration = i + (epoch - 1) * math.ceil(len(hss_dataset) / batch_size)
+            iteration = i + (epoch - 1) * math.ceil(len(train_dataset) / batch_size)
 
             optimizer.zero_grad()
             outputs = model(x)
@@ -79,4 +116,33 @@ if __name__ == "__main__":
                 running_loss = 0.0
                 total = 0
                 correct = 0
+
+        # Validation loop
+        model.eval()
+        val_loss = 0.0
+        val_total = 0.0
+        val_correct = 0.0
+
+        with torch.no_grad():
+            for x, y in val_loader:
+                x = x.cuda().to(torch.float32)
+                y = y.cuda()
+
+                outputs = model(x)
+                loss = loss_fn(outputs.permute((0, 2, 1)), y)
+
+                val_loss += loss.item()
+                predicted = torch.max(outputs, dim=2).indices
+                val_total += y.size(0) * y.size(1)
+                val_correct += torch.sum(predicted == y).item()
+
+        val_accuracy = val_correct / val_total
+        val_loss = val_loss / len(val_loader)
+
+        print(f"Epoch {epoch} Validation - Loss: {val_loss:.4f}, Accuracy: {val_accuracy:.4f}")
+
         scheduler.step()
+
+
+if __name__ == "__main__":
+    main()
