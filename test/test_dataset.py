@@ -23,6 +23,8 @@ def transform(fs: int) -> transforms.Compose:
             FSST(
                 fs=fs,
                 window=scipy.signal.get_window(("kaiser", 0.5), 128, fftbins=False),
+                truncate_freq=(25, 200),
+                stack=True,
             ),
         )
     )
@@ -63,7 +65,7 @@ def test_springer_dataset_framing(dataset_path: str, transform: transforms.Compo
     )
 
     for x, y in dataset:
-        assert x.shape == (2000, 65)
+        assert x.shape == (2000, 44)
         assert y.shape == (2000,)
 
 
@@ -72,6 +74,12 @@ def test_springer_dataset(dataset_path: str, transform: transforms.Compose) -> N
         dataset_path,
         download=True,
         in_memory=True,
+        framing=True,
+        count=5,
         transform=transform,
-        verbose=False,
+        verbose=True,
     )
+
+    x, y = dataset.__getitem__(0)
+
+    print(x)

@@ -10,7 +10,7 @@ from torchvision import transforms
 
 from hss.datasets.heart_sounds import DavidSpringerHSS
 from hss.model.segmenter import HSSegmenter
-from hss.transforms import FSST, Resample
+from hss.transforms import FSST
 from hss.utils.training import ProgressTracker
 
 
@@ -19,21 +19,23 @@ if __name__ == "__main__":
 
     transform = transforms.Compose(
         (
-            Resample(35500),
+            # Resample(35500),
             FSST(
                 1000,
                 window=scipy.signal.get_window(("kaiser", 0.5), 128, fftbins=False),
-                truncate_freq=(25, 150),
+                truncate_freq=(25, 200),
                 stack=True,
             ),
         )
     )
 
-    hss_dataset = DavidSpringerHSS("resources/data", download=True, framing=True, in_memory=True, transform=transform)
+    hss_dataset = DavidSpringerHSS(
+        "resources/data", download=True, framing=True, in_memory=True, count=10, transform=transform
+    )
     batch_size = 5
     hss_loader = DataLoader(hss_dataset, batch_size=batch_size, shuffle=False, generator=torch.Generator(device="cpu"))
 
-    model = HSSegmenter(input_size=128, batch_size=batch_size, device=device)
+    model = HSSegmenter(input_size=44, batch_size=batch_size, device=device)
     loss_fn = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
     scheduler = LambdaLR(optimizer, lr_lambda=[lambda epoch: 0.9**epoch])
@@ -51,8 +53,10 @@ if __name__ == "__main__":
             x = x.cuda()
             y = y.cuda()
             iteration = i + (epoch - 1) * math.ceil(len(hss_dataset) / batch_size)
+
             optimizer.zero_grad()
             outputs = model(x)
+
             loss = loss_fn(outputs.permute((0, 2, 1)), y)
             loss.backward()
             optimizer.step()

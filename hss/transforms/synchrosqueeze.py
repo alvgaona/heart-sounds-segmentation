@@ -48,14 +48,8 @@ class FSST:
 
         # TODO: Normalize FSST output
 
-        if isinstance(s, np.ndarray):
-            fsst = torch.tensor(s)
-
-        if isinstance(f, np.ndarray):
-            f = torch.tensor(f)
-
         if self.truncate_freq:
-            fsst, f = self._truncate_frequencies(s, f.contiguous())
+            s, f = self._truncate_frequencies(s, f.contiguous())
 
         if self.abs:
             return torch.abs(s).t()
@@ -89,10 +83,23 @@ class FSST:
         return z
 
     def _truncate_frequencies(self, s: torch.Tensor, f: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        """Truncate frequencies outside specified range.
+
+        Args:
+            s: Time-frequency spectrum tensor
+            f: Frequency tensor
+
+        Returns:
+            Tuple of truncated spectrum and frequency tensors
+
+        Raises:
+            ValueError: If truncate_freq is not set
+        """
+        if not self.truncate_freq:
+            raise ValueError(f"truncate_freq must be set, got: {self.truncate_freq}")
+
         f = f.squeeze(0)
+        min_freq, max_freq = self.truncate_freq
+        indices = torch.logical_and(f >= min_freq, f <= max_freq)
 
-        if self.truncate_freq:
-            indices = torch.logical_and(f >= self.truncate_freq[0], f <= self.truncate_freq[1])
-            return s[indices, :], f[indices]
-
-        raise ValueError(f"Truncate frequency is: {self.truncate_freq}")
+        return s[indices, :], f[indices]

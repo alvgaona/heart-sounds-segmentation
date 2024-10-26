@@ -155,16 +155,19 @@ class DavidSpringerHSS(Dataset):
             for file_id in walker if not count else islice(walker, count):
                 if verbose:
                     print(f"Processing file: {os.path.basename(file_id)}.csv")
-                x, y = self._apply_transform(*self._load_file(file_id))
+                x, y = self._load_file(file_id)
 
-                print(x.shape)
+                if len(x) < 2000:
+                    continue
 
                 if framing:
-                    frames, labels = frame_signal(x.t(), y, stride, frame_len)
+                    frames, labels = frame_signal(x, y, stride, frame_len)
+
                     for i, (frame, label) in enumerate(zip(frames, labels, strict=False)):
-                        if verbose:
-                            print(f"Processing frame {i} for file {os.path.basename(file_id)}.csv")
-                        self.data.append((frame, label.squeeze(1)))
+                        frame_i, label_i = self._apply_transform(frame, label)
+                        # if verbose:
+                        # print(f"Processing frame {i} for file {os.path.basename(file_id)}.csv")
+                        self.data.append((frame_i, label_i.squeeze(1)))
                     continue
 
                 self.data.append((x, y))
