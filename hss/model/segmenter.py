@@ -2,7 +2,7 @@ import torch
 from torch import nn
 
 
-class HSSegmenter(nn.Module):
+class HeartSoundSegmenter(nn.Module):
     def __init__(
         self,
         *,
