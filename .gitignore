@@ -1,4 +1,7 @@
-/resources/
+resources/
+
+# Lightning AI
+lightning_logs/
 
 # Pixi
 .pixi/

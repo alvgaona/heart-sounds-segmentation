@@ -1,10 +1,14 @@
+import matplotlib.pyplot as plt
 import pytorch_lightning as pl
 import scipy
+import seaborn as sns
 import torch
-import torchmetrics
+from lightning.pytorch.callbacks import EarlyStopping
 from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
+from torchmetrics.classification import Accuracy, Precision, Recall
+from torchmetrics.classification.confusion_matrix import MulticlassConfusionMatrix
 from torchvision import transforms
 
 from hss.datasets.heart_sounds import DavidSpringerHSS
@@ -19,9 +23,21 @@ class LitModel(pl.LightningModule):
         self.loss_fn = nn.CrossEntropyLoss()
         self.batch_size = batch_size
 
-        self.train_acc = torchmetrics.classification.Accuracy(task="multiclass", num_classes=4)
-        self.val_acc = torchmetrics.classification.Accuracy(task="multiclass", num_classes=4)
-        self.test_acc = torchmetrics.classification.Accuracy(task="multiclass", num_classes=4)
+        num_classes = 4
+
+        self.train_acc = Accuracy(task="multiclass", num_classes=num_classes)
+        self.val_acc = Accuracy(task="multiclass", num_classes=num_classes)
+        self.test_acc = Accuracy(task="multiclass", num_classes=num_classes)
+
+        self.train_pre = Precision(task="multiclass", average="macro", num_classes=num_classes)
+        self.val_pre = Precision(task="multiclass", average="macro", num_classes=num_classes)
+        self.test_pre = Precision(task="multiclass", average="macro", num_classes=num_classes)
+
+        self.train_re = Recall(task="multiclass", average="macro", num_classes=num_classes)
+        self.val_re = Recall(task="multiclass", average="macro", num_classes=num_classes)
+        self.test_re = Recall(task="multiclass", average="macro", num_classes=num_classes)
+
+        self.test_confusion_mat = MulticlassConfusionMatrix(num_classes=num_classes)
 
     def forward(self, x):
         return self.model(x.to(torch.float32))
@@ -32,8 +48,15 @@ class LitModel(pl.LightningModule):
         loss = self.loss_fn(outputs, y)
 
         self.train_acc(outputs, y)
+        self.train_pre(outputs, y)
+        self.train_re(outputs, y)
 
-        self.log_dict({"train_loss": loss, "train_acc": self.train_acc}, prog_bar=True, on_step=True, on_epoch=True)
+        self.log_dict(
+            {"train_loss": loss, "train_acc": self.train_acc, "train_prec": self.train_pre, "train_re": self.train_re},
+            prog_bar=True,
+            on_step=True,
+            on_epoch=True,
+        )
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -42,8 +65,15 @@ class LitModel(pl.LightningModule):
         loss = self.loss_fn(outputs, y)
 
         self.val_acc(outputs, y)
+        self.val_pre(outputs, y)
+        self.val_re(outputs, y)
 
-        self.log_dict({"val_loss": loss, "val_acc": self.val_acc}, prog_bar=True, on_step=True, on_epoch=True)
+        self.log_dict(
+            {"val_loss": loss, "val_acc": self.val_acc, "val_prec": self.val_pre, "val_re": self.val_re},
+            prog_bar=True,
+            on_step=False,
+            on_epoch=True,
+        )
         return loss
 
     def test_step(self, batch, batch_idx):
@@ -52,8 +82,17 @@ class LitModel(pl.LightningModule):
         loss = self.loss_fn(outputs, y)
 
         self.test_acc(outputs, y)
+        self.test_pre(outputs, y)
+        self.test_re(outputs, y)
 
-        self.log_dict({"test_loss": loss, "test_acc": self.test_acc}, prog_bar=True, on_step=True, on_epoch=True)
+        self.test_confusion_mat.update(outputs, y)
+
+        self.log_dict(
+            {"test_loss": loss, "test_acc": self.test_acc, "test_prec": self.test_pre, "test_re": self.test_re},
+            prog_bar=True,
+            on_step=True,
+            on_epoch=True,
+        )
         return loss
 
     def configure_optimizers(self):
@@ -124,10 +163,25 @@ def main() -> None:
     )
 
     model = LitModel(input_size=44, batch_size=batch_size, device=device)
-    trainer = pl.Trainer(max_epochs=10, accelerator="gpu" if torch.cuda.is_available() else "cpu")
+    early_stopping = EarlyStopping("val_loss", patience=6, check_finite=True)
+
+    trainer = pl.Trainer(
+        max_epochs=10,
+        accelerator="gpu" if torch.cuda.is_available() else "cpu",
+        gradient_clip_val=1,
+        gradient_clip_algorithm="norm",
+        callbacks=[early_stopping],
+    )
     trainer.fit(model, train_loader, val_loader)
 
     trainer.test(dataloaders=test_loader, ckpt_path="best")
+
+    conf_matrix = model.test_confusion_mat.compute()
+    fig_, ax_ = plt.subplots()
+    sns.heatmap(conf_matrix, annot=True, fmt="d", ax=ax_)
+    ax_.set_xlabel("Predicted")
+    ax_.set_ylabel("True")
+    plt.show()
 
 
 if __name__ == "__main__":

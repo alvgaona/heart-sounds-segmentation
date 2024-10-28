@@ -170,6 +170,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/p11-kit-0.24.1-hc5aa10d_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/packaging-24.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pandas-2.0.3-py311h320fe9a_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/patsy-0.5.6-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pcre2-10.44-hba22ea6_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pillow-11.0.0-py311h49e9ac3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pixman-0.43.2-h59595ed_0.conda
@@ -199,8 +200,11 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/rich-13.9.3-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/ruff-0.7.1-py311h100434b_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/scipy-1.11.2-py311h64a7726_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/seaborn-0.13.2-hd8ed1ab_2.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/seaborn-base-0.13.2-pyhd8ed1ab_2.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/setuptools-75.1.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/six-1.16.0-pyh6c4a22f_0.tar.bz2
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/statsmodels-0.14.4-py311h9f3472d_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/svt-av1-1.4.1-hcb278e6_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sympy-1.13.3-pyh2585a3b_104.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/tbb-2021.13.0-h84d6215_0.conda
@@ -3103,6 +3107,25 @@ packages:
   size: 14711359
   timestamp: 1688741174845
 - kind: conda
+  name: patsy
+  version: 0.5.6
+  build: pyhd8ed1ab_0
+  subdir: noarch
+  noarch: python
+  url: https://conda.anaconda.org/conda-forge/noarch/patsy-0.5.6-pyhd8ed1ab_0.conda
+  sha256: 35ad5cab1d9c08cf98576044bf28f75e62f8492afe6d1a89c94bbe93dc8d7258
+  md5: a5b55d1cb110cdcedc748b5c3e16e687
+  depends:
+  - numpy >=1.4.0
+  - python >=3.6
+  - six
+  license: BSD-2-Clause AND PSF-2.0
+  license_family: BSD
+  purls:
+  - pkg:pypi/patsy?source=conda-forge-mapping
+  size: 187218
+  timestamp: 1704469432353
+- kind: conda
   name: pcre2
   version: '10.44'
   build: hba22ea6_2
@@ -3761,6 +3784,49 @@ packages:
   size: 16308450
   timestamp: 1694608171301
 - kind: conda
+  name: seaborn
+  version: 0.13.2
+  build: hd8ed1ab_2
+  build_number: 2
+  subdir: noarch
+  noarch: python
+  url: https://conda.anaconda.org/conda-forge/noarch/seaborn-0.13.2-hd8ed1ab_2.conda
+  sha256: 79943fbbf1fafbf969257989a7d88638c0c3e7b89a81a75c9347c28768dd6141
+  md5: a79d8797f62715255308d92d3a91ef2e
+  depends:
+  - seaborn-base 0.13.2 pyhd8ed1ab_2
+  - statsmodels >=0.12
+  license: BSD-3-Clause
+  license_family: BSD
+  purls:
+  - pkg:pypi/seaborn?source=conda-forge-mapping
+  size: 6996
+  timestamp: 1714494772218
+- kind: conda
+  name: seaborn-base
+  version: 0.13.2
+  build: pyhd8ed1ab_2
+  build_number: 2
+  subdir: noarch
+  noarch: python
+  url: https://conda.anaconda.org/conda-forge/noarch/seaborn-base-0.13.2-pyhd8ed1ab_2.conda
+  sha256: 5de8b9e88a0f2daf58b07e3f144da26f894e9a20071304fa37329664eb2a29a7
+  md5: b713b116feaf98acdba93ad4d7f90ca1
+  depends:
+  - matplotlib-base >=3.4,!=3.6.1
+  - numpy >=1.20,!=1.24.0
+  - pandas >=1.2
+  - python >=3.8
+  - scipy >=1.7
+  constrains:
+  - seaborn =0.13.2=*_2
+  license: BSD-3-Clause
+  license_family: BSD
+  purls:
+  - pkg:pypi/seaborn?source=conda-forge-mapping
+  size: 234550
+  timestamp: 1714494767378
+- kind: conda
   name: setuptools
   version: 75.1.0
   build: pyhd8ed1ab_0
@@ -3818,6 +3884,31 @@ packages:
   - pytest-cov ; extra == 'tests'
   - pytest-pep8 ; extra == 'tests'
   - soundfile>=0.11.0 ; extra == 'tests'
+- kind: conda
+  name: statsmodels
+  version: 0.14.4
+  build: py311h9f3472d_0
+  subdir: linux-64
+  url: https://conda.anaconda.org/conda-forge/linux-64/statsmodels-0.14.4-py311h9f3472d_0.conda
+  sha256: b5925165bdd694f2d22f4d367c31faeb5a43861b0e3fce575e459038a5f42f62
+  md5: 81e81b5b7a744fcb279e98aa6d2e6683
+  depends:
+  - __glibc >=2.17,<3.0.a0
+  - libgcc >=13
+  - numpy <3,>=1.22.3
+  - numpy >=1.19,<3
+  - packaging >=21.3
+  - pandas !=2.1.0,>=1.4
+  - patsy >=0.5.6
+  - python >=3.11,<3.12.0a0
+  - python_abi 3.11.* *_cp311
+  - scipy !=1.9.2,>=1.8
+  license: BSD-3-Clause
+  license_family: BSD
+  purls:
+  - pkg:pypi/statsmodels?source=conda-forge-mapping
+  size: 12291537
+  timestamp: 1727987151832
 - kind: conda
   name: svt-av1
   version: 1.4.1
