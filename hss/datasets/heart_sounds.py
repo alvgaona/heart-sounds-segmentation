@@ -192,7 +192,7 @@ class DavidSpringerHSS(Dataset):
 
     def _load_file(self, file_id: str) -> tuple[torch.Tensor, torch.Tensor]:
         df = pd.read_csv(file_id + ".csv", skiprows=1, names=["Signals", "Labels"])
-        x = torch.tensor(df.loc[:, "Signals"].to_numpy(), dtype=torch.float32)
+        x = torch.tensor(df.loc[:, "Signals"].to_numpy(), dtype=self.dtype)
         y = torch.tensor(df.loc[:, "Labels"].to_numpy(), dtype=torch.int64)
         return x, y
 

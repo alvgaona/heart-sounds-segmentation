@@ -1,7 +1,5 @@
-import matplotlib.pyplot as plt
-import pytorch_lightning as pl
+import lightning.pytorch as pl
 import scipy
-import seaborn as sns
 import torch
 from lightning.pytorch.callbacks import EarlyStopping
 from torch import nn
@@ -19,14 +17,24 @@ from hss.transforms import FSST
 class LitModel(pl.LightningModule):
     def __init__(self, input_size, batch_size, device):
         super().__init__()
-        self.model = HeartSoundSegmenter(input_size=input_size, batch_size=batch_size, device=device)
+        self.model = HeartSoundSegmenter(
+            input_size=input_size,
+            batch_size=batch_size,
+            device=device,
+            dtype=torch.float32,
+        )
         self.loss_fn = nn.CrossEntropyLoss()
         self.batch_size = batch_size
 
         num_classes = 4
 
+        self.train_acc_per_class = Accuracy(task="multiclass", num_classes=num_classes, average=None)
         self.train_acc = Accuracy(task="multiclass", num_classes=num_classes)
+
+        self.val_acc_per_class = Accuracy(task="multiclass", num_classes=num_classes, average=None)
         self.val_acc = Accuracy(task="multiclass", num_classes=num_classes)
+
+        self.test_acc_per_class = Accuracy(task="multiclass", num_classes=num_classes, average=None)
         self.test_acc = Accuracy(task="multiclass", num_classes=num_classes)
 
         self.train_pre = Precision(task="multiclass", average="macro", num_classes=num_classes)
@@ -40,7 +48,7 @@ class LitModel(pl.LightningModule):
         self.test_confusion_mat = MulticlassConfusionMatrix(num_classes=num_classes)
 
     def forward(self, x):
-        return self.model(x.to(torch.float32))
+        return self.model(x)
 
     def training_step(self, batch, batch_idx):
         x, y = batch
@@ -50,13 +58,27 @@ class LitModel(pl.LightningModule):
         self.train_acc(outputs, y)
         self.train_pre(outputs, y)
         self.train_re(outputs, y)
+        self.train_acc_per_class(outputs, y)
 
         self.log_dict(
-            {"train_loss": loss, "train_acc": self.train_acc, "train_prec": self.train_pre, "train_re": self.train_re},
+            {
+                "train_loss": loss,
+                "train_acc": self.train_acc,
+            },
             prog_bar=True,
             on_step=True,
             on_epoch=True,
         )
+
+        self.log_dict(
+            {
+                "train_prec": self.train_pre,
+                "train_re": self.train_re,
+            },
+            on_step=True,
+            on_epoch=True,
+        )
+
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -67,13 +89,27 @@ class LitModel(pl.LightningModule):
         self.val_acc(outputs, y)
         self.val_pre(outputs, y)
         self.val_re(outputs, y)
+        self.val_acc_per_class(outputs, y)
 
         self.log_dict(
-            {"val_loss": loss, "val_acc": self.val_acc, "val_prec": self.val_pre, "val_re": self.val_re},
+            {
+                "val_loss": loss,
+                "val_acc": self.val_acc,
+            },
             prog_bar=True,
-            on_step=False,
+            on_step=True,
             on_epoch=True,
         )
+
+        self.log_dict(
+            {
+                "val_prec": self.val_pre,
+                "val_re": self.val_re,
+            },
+            on_step=True,
+            on_epoch=True,
+        )
+
         return loss
 
     def test_step(self, batch, batch_idx):
@@ -84,15 +120,27 @@ class LitModel(pl.LightningModule):
         self.test_acc(outputs, y)
         self.test_pre(outputs, y)
         self.test_re(outputs, y)
-
-        self.test_confusion_mat.update(outputs, y)
+        self.test_acc_per_class(outputs, y)
 
         self.log_dict(
-            {"test_loss": loss, "test_acc": self.test_acc, "test_prec": self.test_pre, "test_re": self.test_re},
+            {
+                "test_loss": loss,
+                "test_acc": self.test_acc,
+            },
             prog_bar=True,
             on_step=True,
             on_epoch=True,
         )
+
+        self.log_dict(
+            {
+                "test_prec": self.test_pre,
+                "test_re": self.test_re,
+            },
+            on_step=True,
+            on_epoch=True,
+        )
+
         return loss
 
     def configure_optimizers(self):
@@ -106,6 +154,7 @@ def main() -> None:
 
     transform = transforms.Compose(
         (
+            # Resample(35500),
             FSST(
                 1000,
                 window=scipy.signal.get_window(("kaiser", 0.5), 128, fftbins=False),
@@ -154,7 +203,7 @@ def main() -> None:
     )
 
     test_loader = DataLoader(
-        val_dataset,
+        test_dataset,
         batch_size=batch_size,
         shuffle=False,
         drop_last=True,
@@ -173,15 +222,7 @@ def main() -> None:
         callbacks=[early_stopping],
     )
     trainer.fit(model, train_loader, val_loader)
-
     trainer.test(dataloaders=test_loader, ckpt_path="best")
-
-    conf_matrix = model.test_confusion_mat.compute()
-    fig_, ax_ = plt.subplots()
-    sns.heatmap(conf_matrix, annot=True, fmt="d", ax=ax_)
-    ax_.set_xlabel("Predicted")
-    ax_.set_ylabel("True")
-    plt.show()
 
 
 if __name__ == "__main__":

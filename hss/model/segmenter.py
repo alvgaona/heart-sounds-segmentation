@@ -11,6 +11,7 @@ class HeartSoundSegmenter(nn.Module):
         hidden_size: int = 240,
         bidirectional: bool = True,
         device: torch.device = torch.cpu,
+        dtype: torch.dtype = torch.float32,
     ):
         super().__init__()
 
@@ -19,8 +20,8 @@ class HeartSoundSegmenter(nn.Module):
         D = 2 if bidirectional else 1
 
         self.h0, self.c0 = (
-            torch.randn(D, batch_size, hidden_size, device=device),
-            torch.randn(D, batch_size, hidden_size, device=device),
+            torch.randn(D, batch_size, hidden_size, device=device, dtype=dtype),
+            torch.randn(D, batch_size, hidden_size, device=device, dtype=dtype),
         )
 
         self.lstm_1 = nn.LSTM(
@@ -29,6 +30,7 @@ class HeartSoundSegmenter(nn.Module):
             bidirectional=bidirectional,
             batch_first=True,
             device=device,
+            dtype=dtype,
         )
         self.lstm_2 = nn.LSTM(
             input_size=hidden_size * 2,
@@ -36,10 +38,11 @@ class HeartSoundSegmenter(nn.Module):
             bidirectional=bidirectional,
             batch_first=True,
             device=device,
+            dtype=dtype,
         )
         self.dropout = nn.Dropout(0.2)
         self.relu = nn.ReLU()
-        self.linear = nn.Linear(in_features=hidden_size * 2, out_features=4, bias=True, device=device)
+        self.linear = nn.Linear(in_features=hidden_size * 2, out_features=4, bias=True, device=device, dtype=dtype)
         self.softmax = nn.LogSoftmax(dim=2)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:

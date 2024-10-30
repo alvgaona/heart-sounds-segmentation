@@ -17,6 +17,7 @@ class FSST:
         abs: bool = False,
         stack: bool = False,
         truncate_freq: Optional[tuple] = None,
+        dtype: torch.dtype = torch.float32,
     ):
         """
         Args:
@@ -31,6 +32,7 @@ class FSST:
         self.abs = abs
         self.stack = stack
         self.truncate_freq = truncate_freq
+        self.dtype = dtype
 
     def __call__(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -45,7 +47,11 @@ class FSST:
         """
         s, f, t = fftsqueeze(x.cpu(), self.fs, self.window)
 
-        s, f, t = torch.tensor(s), torch.tensor(f), torch.tensor(t)
+        s, f, t = (
+            torch.tensor(s, dtype=torch.complex64),
+            torch.tensor(f, dtype=self.dtype),
+            torch.tensor(t, dtype=self.dtype),
+        )
 
         if self.truncate_freq:
             s, f = self._truncate_frequencies(s, f.contiguous())
