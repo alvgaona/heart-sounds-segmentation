@@ -33,25 +33,33 @@ class LitModel(pl.LightningModule):
         self.batch_size = batch_size
         num_classes = 4
 
+        self.train_metrics_per_class = MetricCollection(
+            {
+                "accuracy": Accuracy(task="multiclass", average=None, num_classes=num_classes),
+                "precision": Precision(task="multiclass", average=None, num_classes=num_classes),
+                "recall": Recall(task="multiclass", average=None, num_classes=num_classes),
+                "f1": F1Score(task="multiclass", average=None, num_classes=num_classes),
+            },
+            prefix="train_per_class_",
+        )
+
+        self.val_metrics_per_class = self.train_metrics_per_class.clone(prefix="val_")
+        self.test_metrics_per_class = self.train_metrics_per_class.clone(prefix="test_")
+        self.test_metrics_per_class.add_metrics(AUROC(task="multiclass", average=None, num_classes=num_classes))
+
         self.train_metrics = MetricCollection(
             {
-                "accuracy": Accuracy(task="multiclass", num_classes=num_classes),
+                "accuracy": Accuracy(task="multiclass", average="macro", num_classes=num_classes),
                 "precision": Precision(task="multiclass", average="macro", num_classes=num_classes),
                 "recall": Recall(task="multiclass", average="macro", num_classes=num_classes),
-                "f1": F1Score(task="multiclass", num_classes=num_classes),
+                "f1": F1Score(task="multiclass", average="macro", num_classes=num_classes),
             },
             prefix="train_",
         )
 
         self.val_metrics = self.train_metrics.clone(prefix="val_")
         self.test_metrics = self.train_metrics.clone(prefix="test_")
-        self.test_metrics.add_metrics(AUROC(task="multiclass", num_classes=num_classes, average="macro"))
-
-    def on_train_epoch_end(self) -> None:
-        self.train_metrics.reset()
-
-    def on_validation_epoch_end(self) -> None:
-        self.val_metrics.reset()
+        self.test_metrics.add_metrics(AUROC(task="multiclass", average="macro", num_classes=num_classes))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.model(x)
@@ -61,33 +69,68 @@ class LitModel(pl.LightningModule):
         outputs = self(x).permute((0, 2, 1))
         loss = self.loss_fn(outputs, y)
 
+        metrics_per_class = self.train_metrics_per_class(outputs, y)
+        self.train_metrics_per_class.reset()
+
         self.log("train_loss", loss, prog_bar=True, on_step=True)
         self.log_dict(self.train_metrics(outputs, y), prog_bar=True, on_step=True, on_epoch=True)
 
+        for metric_name, metric_values in metrics_per_class.items():
+            for i, v in enumerate(metric_values):
+                self.log(f"{metric_name}_{i}", v, prog_bar=True, on_step=False, on_epoch=True)
+
         return loss
+
+    def on_train_epoch_end(self) -> None:
+        self.train_metrics_per_class.reset()
+        self.train_metrics.reset()
 
     def validation_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> torch.Tensor:
         x, y = batch
         outputs = self(x).permute((0, 2, 1))
         loss = self.loss_fn(outputs, y)
 
+        metrics_per_class = self.val_metrics_per_class(outputs, y)
+        self.val_metrics_per_class.reset()
+
         self.log("val_loss", loss, prog_bar=True, on_step=True)
         self.log_dict(self.val_metrics(outputs, y), prog_bar=True, on_step=True, on_epoch=True)
 
+        for metric_name, metric_values in metrics_per_class.items():
+            for i, v in enumerate(metric_values):
+                self.log(f"{metric_name}_{i}", v, prog_bar=True, on_step=False, on_epoch=True)
+
         return loss
+
+    def on_validation_epoch_end(self) -> None:
+        self.val_metrics_per_class.reset()
+        self.val_metrics.reset()
 
     def test_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> torch.Tensor:
         x, y = batch
         outputs = self(x).permute((0, 2, 1))
         loss = self.loss_fn(outputs, y)
 
+        metrics_per_class = self.test_metrics_per_class(outputs, y)
+        self.test_metrics_per_class.reset()
+
         self.log("test_loss", loss, prog_bar=True, on_step=True)
         self.log_dict(self.test_metrics(outputs, y), prog_bar=True, on_step=True, on_epoch=True)
 
+        for metric_name, metric_values in metrics_per_class.items():
+            for i, v in enumerate(metric_values):
+                self.log(f"{metric_name}_{i}", v, prog_bar=True, on_step=False, on_epoch=True)
+
         return loss
+
+    def on_test_epoch_end(self) -> None:
+        self.test_metrics_per_class.reset()
+        self.test_metrics.reset()
 
     def configure_optimizers(self) -> OptimizerLRScheduler:
         optimizer = Adam(self.parameters(), lr=0.01)
+
+        # Reduce the learning rate 10% on every epoch
         scheduler = LambdaLR(optimizer, lr_lambda=lambda epoch: 0.9**epoch)
         return {"optimizer": optimizer, "lr_scheduler": scheduler}
 
@@ -122,12 +165,12 @@ def main() -> None:
     train_val_size = len(hss_dataset) - test_size
 
     train_val_dataset, test_dataset = torch.utils.data.random_split(
-        hss_dataset, [train_val_size, test_size], generator=torch.Generator().manual_seed(68)
+        hss_dataset, [train_val_size, test_size], generator=torch.Generator()
     )
 
     # Now do k-fold cross validation on the train+val portion
     n_splits = 5
-    kfold = KFold(n_splits=n_splits, shuffle=True, random_state=68)
+    kfold = KFold(n_splits=n_splits, shuffle=True)
 
     for fold, (train_idx, val_idx) in enumerate(kfold.split(range(train_val_size))):
         # Create samplers for data loading

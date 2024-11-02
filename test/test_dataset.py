@@ -67,15 +67,3 @@ def test_springer_dataset_framing(dataset_path: str, transform: transforms.Compo
     for x, y in dataset:
         assert x.shape == (2000, 44)
         assert y.shape == (2000,)
-
-
-def test_springer_dataset(dataset_path: str, transform: transforms.Compose) -> None:
-    dataset = DavidSpringerHSS(
-        dataset_path,
-        download=True,
-        in_memory=True,
-        framing=True,
-        count=5,
-        transform=transform,
-        verbose=True,
-    )

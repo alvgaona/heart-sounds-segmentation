@@ -2,27 +2,31 @@ import pandas as pd
 import scipy
 import torch
 from torchvision import transforms
-
-from hss.transforms.synchrosqueeze import FSST
-from hss.utils.preprocess import frame_signal
-
+import matplotlib.pyplot as plt
+from scipy import signal
+from fsst import fftsqueeze
 
 if __name__ == "__main__":
     df = pd.read_csv("./resources/data/springer_sounds/0001.csv", skiprows=1, names=["Signals", "Labels"])
     x = torch.tensor(df.loc[:, "Signals"].to_numpy())
     y = torch.tensor(df.loc[:, "Labels"].to_numpy(), dtype=torch.int64)
 
-    frames, labels = frame_signal(x, y, 1000, 2000)
+    window = signal.get_window(("kaiser", 0.5), 128, fftbins=False)
+    s, f, t = fftsqueeze(x, fs=1000, window=window)
 
-    transform = transforms.Compose(
-        (
-            FSST(
-                1000,
-                window=scipy.signal.get_window(("kaiser", 0.5), 128, fftbins=False),
-                stack=True,
-                truncate_freq=(25, 200),
-            ),
-        )
-    )
+    # Plot input signal
+    plt.figure(figsize=(12,6))
+    plt.plot(x)
+    plt.title("Input Signal")
+    plt.xlabel("Sample")
+    plt.ylabel("Amplitude")
 
-    s = transform(frames[0]).cpu().squeeze(0)
+    # Plot spectrogram
+    plt.figure(figsize=(12, 6))
+    plt.pcolormesh(t, f, abs(s), shading='gouraud')
+    plt.colorbar(label='Magnitude')
+    plt.title("Spectrogram")
+    plt.xlabel("Time [sec]")
+    plt.ylabel("Frequency [Hz]")
+    plt.tight_layout()
+    plt.show()
