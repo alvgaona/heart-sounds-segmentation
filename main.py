@@ -71,12 +71,12 @@ class LitModel(pl.LightningModule):
         metrics_per_class = self.train_metrics_per_class(outputs, y)
         self.train_metrics_per_class.reset()
 
-        self.log("train_loss", loss, prog_bar=True, on_step=True)
+        self.log("train_loss", loss, prog_bar=True, on_step=True, on_epoch=True)
         self.log_dict(self.train_metrics(outputs, y), prog_bar=True, on_step=True, on_epoch=True)
 
         for metric_name, metric_values in metrics_per_class.items():
             for i, v in enumerate(metric_values):
-                self.log(f"{metric_name}_{i}", v, prog_bar=True, on_step=False, on_epoch=True)
+                self.log(f"{metric_name}_{i}", v)
 
         return loss
 
@@ -92,12 +92,12 @@ class LitModel(pl.LightningModule):
         metrics_per_class = self.val_metrics_per_class(outputs, y)
         self.val_metrics_per_class.reset()
 
-        self.log("val_loss", loss, prog_bar=True, on_step=True)
-        self.log_dict(self.val_metrics(outputs, y), prog_bar=True, on_step=True, on_epoch=True)
+        self.log("val_loss", loss, prog_bar=True, on_step=True, on_epoch=True)
+        self.log_dict(self.val_metrics(outputs, y), prog_bar=True, on_step=False, on_epoch=True)
 
         for metric_name, metric_values in metrics_per_class.items():
             for i, v in enumerate(metric_values):
-                self.log(f"{metric_name}_{i}", v, prog_bar=True, on_step=False, on_epoch=True)
+                self.log(f"{metric_name}_{i}", v)
 
         return loss
 
@@ -113,12 +113,12 @@ class LitModel(pl.LightningModule):
         metrics_per_class = self.test_metrics_per_class(outputs, y)
         self.test_metrics_per_class.reset()
 
-        self.log("test_loss", loss, prog_bar=True, on_step=True)
-        self.log_dict(self.test_metrics(outputs, y), prog_bar=True, on_step=True, on_epoch=True)
+        self.log("test_loss", loss)
+        self.log_dict(self.test_metrics(outputs, y))
 
         for metric_name, metric_values in metrics_per_class.items():
             for i, v in enumerate(metric_values):
-                self.log(f"{metric_name}_{i}", v, prog_bar=True, on_step=False, on_epoch=True)
+                self.log(f"{metric_name}_{i}", v)
 
         return loss
 
@@ -167,7 +167,7 @@ def main() -> None:
     )
 
     # Now do k-fold cross validation on the train+val portion
-    n_splits = 5
+    n_splits = 10
     kfold = KFold(n_splits=n_splits, shuffle=True, random_state=68)
 
     # Initialize lists to store metrics for each fold
@@ -201,7 +201,7 @@ def main() -> None:
         early_stopping = EarlyStopping("val_loss", patience=6, check_finite=True)
 
         trainer = pl.Trainer(
-            max_epochs=10,
+            max_epochs=15,
             accelerator="gpu" if torch.cuda.is_available() else "cpu",
             gradient_clip_val=1,
             gradient_clip_algorithm="norm",
