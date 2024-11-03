@@ -26,13 +26,58 @@ Each sample has a label associated to it according to this description.
 ## Training
 
 The training consists of creating three subsets: training, validation and testing.
-I'm using a 5-fold cross-validatio to evaluate the model performance.
 The optimizer is the ADAM optimizer with a learning rate scheduler which decreases it 10% after each epoch.
+The batch size is set to 50.
 
 A couple of techniques such as early stopping and gradient clipping are in place to avoid overfitting.
 
 ## Evaluation
 
+I'm using a 5-fold cross-validatio to evaluate the model performance.
+The metrics of interest are:
+
+- Accuracy
+- Precision
+- Recall
+- F1 Score
+- Area under the ROC (AUROC)
+
+By default it was trained using `torch.float32` and yielded these averaged metrics across
+the training folds.
+
+```text
+Class 0
+---
+Accuracy: 0.8803408741950989
+Precision: 0.8762761950492859
+Recall: 0.8803408741950989
+F1: 0.8781313896179199
+AUROC: 0.9888917803764343
+
+Class 1
+---
+Accuracy: 0.9190875887870789
+Precision: 0.9104253649711609
+Recall: 0.9190875887870789
+F1: 0.9146085977554321
+AUROC: 0.9921445846557617
+
+Class 2
+---
+Accuracy: 0.8765876889228821
+Precision: 0.8842183351516724
+Recall: 0.8765876889228821
+F1: 0.8802887201309204
+AUROC: 0.9919253587722778
+
+Class 3
+---
+Accuracy: 0.9528071284294128
+Precision: 0.9565860033035278
+Recall: 0.9528071284294128
+F1: 0.9546396136283875
+AUROC: 0.992216885089874
+```
 
 ## Usage
 

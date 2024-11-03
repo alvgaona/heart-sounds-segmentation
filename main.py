@@ -27,7 +27,6 @@ class LitModel(pl.LightningModule):
             input_size=input_size,
             batch_size=batch_size,
             device=device,
-            dtype=torch.float32,
         )
         self.loss_fn = nn.CrossEntropyLoss()
         self.batch_size = batch_size
@@ -164,12 +163,12 @@ def main() -> None:
     train_val_size = len(hss_dataset) - test_size
 
     train_val_dataset, test_dataset = torch.utils.data.random_split(
-        hss_dataset, [train_val_size, test_size], generator=torch.Generator().manual_seed(42)
+        hss_dataset, [train_val_size, test_size], generator=torch.Generator().manual_seed(68)
     )
 
     # Now do k-fold cross validation on the train+val portion
     n_splits = 5
-    kfold = KFold(n_splits=n_splits, shuffle=True, random_state=42)
+    kfold = KFold(n_splits=n_splits, shuffle=True, random_state=68)
 
     # Initialize lists to store metrics for each fold
     fold_metrics = [
@@ -233,7 +232,7 @@ def main() -> None:
         print(f"Precision: {torch.mean(metrics['precision'])}")
         print(f"Recall: {torch.mean(metrics['recall'])}")
         print(f"F1: {torch.mean(metrics['f1'])}")
-        print(f"AUROC: {torch.mean(metrics['MulticlassAUROC'])}")
+        print(f"AUROC: {torch.mean(metrics['MulticlassAUROC'])}\n")
 
 
 if __name__ == "__main__":

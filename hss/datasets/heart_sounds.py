@@ -6,6 +6,7 @@ import pandas as pd
 import torch
 import torchaudio
 import torchvision.transforms
+from rich.progress import track
 from torch.hub import download_url_to_file
 from torch.utils.data import Dataset
 from torchaudio.datasets.utils import _extract_zip as extract_zip
@@ -152,20 +153,19 @@ class DavidSpringerHSS(Dataset):
         walker = walk_files(self.dst, suffix=".csv", prefix=True, remove_suffix=True)
 
         if in_memory:
-            for file_id in walker if not count else islice(walker, count):
-                if verbose:
-                    print(f"Processing file: {os.path.basename(file_id)}.csv")
+            file_ids = list(walker if not count else islice(walker, count))
+            for file_id in track(file_ids, description="Loading Springer dataset...", disable=not verbose):
                 x, y = self._load_file(file_id)
 
-                if len(x) < 2000:
-                    continue
-
                 if framing:
+                    if len(x) < frame_len:
+                        continue
+
                     frames, labels = frame_signal(x, y - 1, stride, frame_len)
 
                     for _, (frame, label) in enumerate(zip(frames, labels, strict=False)):
                         frame_i, label_i = self._apply_transform(frame, label)
-                        self.data.append((frame_i, label_i.squeeze(1)))
+                        self.data.append((frame_i.to(self.dtype), label_i.squeeze(1)))
                     continue
 
                 self.data.append((x, y))
