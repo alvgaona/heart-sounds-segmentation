@@ -1,8 +1,8 @@
 from typing import Optional
 
-import numpy as np
+import numpy.typing as npt
 import torch
-from fsst import fftsqueeze
+from fsst import fsst
 
 
 class FSST:
@@ -13,7 +13,7 @@ class FSST:
     def __init__(
         self,
         fs: float,
-        window: Optional[np.ndarray] = None,
+        window: npt.NDArray,
         abs: bool = False,
         stack: bool = False,
         truncate_freq: Optional[tuple] = None,
@@ -27,8 +27,8 @@ class FSST:
             stack (bool): true or false in order to stack or not the real and image parts of the spectrum.
                 Default: False
         """
-        self.fs = fs
-        self.window = window
+        self.fs: float = fs
+        self.window: npt.NDArray = window
         self.abs = abs
         self.stack = stack
         self.truncate_freq = truncate_freq
@@ -45,7 +45,7 @@ class FSST:
             Tuple: Original signal, STFT Synchrosqueezed Transform, STFT, and frequencies
 
         """
-        s, f, t = fftsqueeze(x.cpu(), self.fs, self.window)
+        s, f, t = fsst(x.numpy(), self.fs, self.window)
 
         s, f, t = (
             torch.tensor(s, dtype=torch.complex64),

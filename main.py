@@ -140,7 +140,6 @@ def main() -> None:
 
     transform = transforms.Compose(
         (
-            # Resample(35500),
             FSST(
                 1000,
                 window=scipy.signal.get_window(("kaiser", 0.5), 128, fftbins=False),
@@ -165,14 +164,26 @@ def main() -> None:
     train_val_size = len(hss_dataset) - test_size
 
     train_val_dataset, test_dataset = torch.utils.data.random_split(
-        hss_dataset, [train_val_size, test_size], generator=torch.Generator()
+        hss_dataset, [train_val_size, test_size], generator=torch.Generator().manual_seed(42)
     )
 
     # Now do k-fold cross validation on the train+val portion
     n_splits = 5
-    kfold = KFold(n_splits=n_splits, shuffle=True)
+    kfold = KFold(n_splits=n_splits, shuffle=True, random_state=42)
 
-    for fold, (train_idx, val_idx) in enumerate(kfold.split(range(train_val_size))):
+    # Initialize lists to store metrics for each fold
+    fold_metrics = [
+        {
+            "accuracy": torch.zeros(n_splits),
+            "precision": torch.zeros(n_splits),
+            "recall": torch.zeros(n_splits),
+            "f1": torch.zeros(n_splits),
+            "MulticlassAUROC": torch.zeros(n_splits),
+        }
+        for _ in range(4)
+    ]
+
+    for fold_idx, (train_idx, val_idx) in enumerate(kfold.split(range(train_val_size))):
         # Create samplers for data loading
         train_sampler = SubsetRandomSampler(train_idx)
         val_sampler = SubsetRandomSampler(val_idx)
@@ -201,14 +212,28 @@ def main() -> None:
         # Train and validate for this fold
         trainer.fit(model, train_loader, val_loader)
 
-        # Optional: Save fold results
-        print(f"Fold {fold} completed")
-
         # Create test loader from held-out test set
         test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=19, drop_last=True)
 
         # Test the model
-        trainer.test(dataloaders=test_loader, ckpt_path="best")
+        test_results = trainer.test(dataloaders=test_loader, ckpt_path="best")[0]
+
+        # Loop through classes and metrics
+        metrics = ["accuracy", "precision", "recall", "f1", "MulticlassAUROC"]
+
+        for metric in metrics:
+            for i in range(4):
+                metric_key = f"test_{metric}_{i}"
+                fold_metrics[i][metric][fold_idx] = test_results[metric_key]
+
+    for i, metrics in enumerate(fold_metrics):
+        print(f"Class {i}")
+        print("---")
+        print(f"Accuracy: {torch.mean(metrics['accuracy'])}")
+        print(f"Precision: {torch.mean(metrics['precision'])}")
+        print(f"Recall: {torch.mean(metrics['recall'])}")
+        print(f"F1: {torch.mean(metrics['f1'])}")
+        print(f"AUROC: {torch.mean(metrics['MulticlassAUROC'])}")
 
 
 if __name__ == "__main__":

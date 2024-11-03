@@ -1,10 +1,9 @@
-import pandas as pd
-import scipy
-import torch
-from torchvision import transforms
 import matplotlib.pyplot as plt
+import pandas as pd
+import torch
+from fsst import fsst
 from scipy import signal
-from fsst import fftsqueeze
+
 
 if __name__ == "__main__":
     df = pd.read_csv("./resources/data/springer_sounds/0001.csv", skiprows=1, names=["Signals", "Labels"])
@@ -12,10 +11,10 @@ if __name__ == "__main__":
     y = torch.tensor(df.loc[:, "Labels"].to_numpy(), dtype=torch.int64)
 
     window = signal.get_window(("kaiser", 0.5), 128, fftbins=False)
-    s, f, t = fftsqueeze(x, fs=1000, window=window)
+    s, f, t = fsst(x.numpy(), fs=1000, window=window)
 
     # Plot input signal
-    plt.figure(figsize=(12,6))
+    plt.figure(figsize=(12, 6))
     plt.plot(x)
     plt.title("Input Signal")
     plt.xlabel("Sample")
@@ -23,8 +22,8 @@ if __name__ == "__main__":
 
     # Plot spectrogram
     plt.figure(figsize=(12, 6))
-    plt.pcolormesh(t, f, abs(s), shading='gouraud')
-    plt.colorbar(label='Magnitude')
+    plt.pcolormesh(t, f, abs(s), shading="gouraud")
+    plt.colorbar(label="Magnitude")
     plt.title("Spectrogram")
     plt.xlabel("Time [sec]")
     plt.ylabel("Frequency [Hz]")
