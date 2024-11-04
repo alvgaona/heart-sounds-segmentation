@@ -25,7 +25,6 @@ class LitModel(pl.LightningModule):
         super().__init__()
         self.model = HeartSoundSegmenter(
             input_size=input_size,
-            batch_size=batch_size,
             device=device,
         )
         self.loss_fn = nn.CrossEntropyLoss()
@@ -189,11 +188,19 @@ def main() -> None:
 
         # Create data loaders
         train_loader = DataLoader(
-            train_val_dataset, batch_size=batch_size, sampler=train_sampler, num_workers=19, drop_last=True
+            train_val_dataset,
+            batch_size=batch_size,
+            sampler=train_sampler,
+            num_workers=19,
+            drop_last=True,
         )
 
         val_loader = DataLoader(
-            train_val_dataset, batch_size=batch_size, sampler=val_sampler, num_workers=19, drop_last=True
+            train_val_dataset,
+            batch_size=batch_size,
+            sampler=val_sampler,
+            num_workers=19,
+            drop_last=True,
         )
 
         # Initialize model and training
