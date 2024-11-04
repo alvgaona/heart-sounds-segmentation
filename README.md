@@ -43,7 +43,7 @@ comprehensive performance assessment:
 - F1 Score: Harmonic mean of precision and recall
 - Area under the ROC (AUROC): Overall classification performance
 
-The model was trained using `torch.float32` precision, achieving impressive results across all metrics as shown below:
+The model was trained using `torch.float32` precision, achieving these results across all metrics as shown below:
 
 | Class     | Accuracy (mean ± std)  | Precision (mean ± std) | Recall (mean ± std)  | F1 (mean ± std)    | AUROC (mean ± std)    |
 |-----------|------------------------|------------------------|----------------------|--------------------|-----------------------|
