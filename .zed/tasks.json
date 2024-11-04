@@ -1,7 +1,7 @@
 [
     {
         "label": "Check and format code",
-        "command": "pixi run ruff check --fix . && pixi run ruff format .",
+        "command": "pixi run lint",
         "use_new_terminal": false,
         "allow_concurrent_runs": false,
         "reveal": "always",
@@ -10,7 +10,7 @@
     },
     {
         "label": "Run pytest",
-        "command": "pixi run pytest",
+        "command": "pixi run test",
         "use_new_terminal": false,
         "allow_concurrent_runs": false,
         "reveal": "always",

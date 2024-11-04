@@ -18,7 +18,7 @@ Home = "https://github.com/alvgaona/heart-sounds-segmentation"
 
 [tool.pixi.project]
 channels = ["nvidia", "conda-forge", "pytorch"]
-platforms = ["linux-64"]
+platforms = ["linux-64"]                        # Not tested in other platforms
 
 [tool.pixi.project.pypi-options]
 extra-index-urls = [
@@ -47,6 +47,11 @@ scikit-learn = ">=1.5.2,<2"
 sox = "*"
 soundfile = "*"
 fsst = ">=0.1.1,<0.2"
+
+[tool.pixi.tasks]
+start = "PYTHONPATH=. python main.py"
+lint = "pixi run ruff check --fix . && pixi run ruff format ."
+test = "pixi run pytest"
 
 [tool.pixi.environments]
 default = { features = [], solve-group = "default" }
