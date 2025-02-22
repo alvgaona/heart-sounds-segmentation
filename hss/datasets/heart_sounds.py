@@ -45,7 +45,7 @@ class PhysionetChallenge2016(Dataset):
         url: str = "training",
         train: bool = True,
         download: bool = False,
-        transform: torchvision.transforms.Compose = None,
+        transform: torchvision.transforms.Compose | None = None,
     ):
         """
         Instantiate HeartSoundsAudio object.
@@ -101,7 +101,7 @@ class PhysionetChallenge2016(Dataset):
         file_audio = file_id + self._ext_audio
         output, sample_rate = torchaudio.load(file_audio)
 
-        output = self.transform(output[0])
+        output = self.transform(output[0]) if self.transform is not None else output[0]
 
         return output, sample_rate, label, set_name, basename
 
