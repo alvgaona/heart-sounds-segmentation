@@ -18,7 +18,7 @@ Home = "https://github.com/alvgaona/heart-sounds-segmentation"
 
 [tool.pixi.project]
 channels = ["nvidia", "conda-forge", "pytorch"]
-platforms = ["linux-64"]
+platforms = ["linux-64", "win-64"]
 
 [tool.pixi.project.pypi-options]
 extra-index-urls = [
