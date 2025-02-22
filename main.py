@@ -8,7 +8,7 @@ from lightning.pytorch.callbacks import EarlyStopping, RichProgressBar
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from sklearn.model_selection import KFold
 from torch import nn
-from torch.optim import Adam
+from torch.optim.adam import Adam
 from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader, SubsetRandomSampler
 from torchmetrics import MetricCollection
@@ -189,11 +189,13 @@ def main() -> None:
 
         # Create data loaders
         train_loader = DataLoader(
-            train_val_dataset, batch_size=batch_size, sampler=train_sampler, num_workers=19, drop_last=True
+            train_val_dataset, batch_size=batch_size, sampler=train_sampler,
+            num_workers=19, drop_last=True, persistent_workers=True,
         )
 
         val_loader = DataLoader(
-            train_val_dataset, batch_size=batch_size, sampler=val_sampler, num_workers=19, drop_last=True
+            train_val_dataset, batch_size=batch_size, sampler=val_sampler,
+            num_workers=19, drop_last=True, persistent_workers=True,
         )
 
         # Initialize model and training
