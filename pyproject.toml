@@ -27,9 +27,9 @@ extra-index-urls = [
 
 [tool.pixi.dependencies]
 python = { version = ">=3.9,<3.12", channel = "conda-forge" }
-scipy = "1.11.2"
-pandas = "2.0.3"
-numba = "0.57.1"
+scipy = "1.11.*"
+pandas = "2.0.*"
+numba = "0.57.*"
 rich = ">=13.9.3,<14"
 pytest = "*"
 ruff = "*"
