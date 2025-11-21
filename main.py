@@ -18,10 +18,13 @@ from torchvision import transforms
 from hss.datasets.heart_sounds import DavidSpringerHSS
 from hss.model.segmenter import HeartSoundSegmenter
 from hss.transforms import FSST
+from hss.utils.sequence_validator import validate_and_correct_predictions
 
 
 class LitModel(pl.LightningModule):
-    def __init__(self, input_size: int, batch_size: int, device: torch.device) -> None:
+    def __init__(
+        self, input_size: int, batch_size: int, device: torch.device, use_sequence_constraints: bool = True
+    ) -> None:
         super().__init__()
         self.model = HeartSoundSegmenter(
             input_size=input_size,
@@ -30,6 +33,7 @@ class LitModel(pl.LightningModule):
         )
         self.loss_fn = nn.CrossEntropyLoss()
         self.batch_size = batch_size
+        self.use_sequence_constraints = use_sequence_constraints
         num_classes = 4
 
         self.train_metrics_per_class = MetricCollection(
@@ -59,6 +63,13 @@ class LitModel(pl.LightningModule):
         self.val_metrics = self.train_metrics.clone(prefix="val_")
         self.test_metrics = self.train_metrics.clone(prefix="test_")
         self.test_metrics.add_metrics(AUROC(task="multiclass", average="macro", num_classes=num_classes))
+
+        # Add constrained metrics for sequence-validated predictions
+        if self.use_sequence_constraints:
+            self.test_metrics_constrained = self.train_metrics.clone(prefix="test_constrained_")
+            self.test_metrics_constrained_per_class = self.train_metrics_per_class.clone(prefix="test_constrained_")
+            self.val_metrics_constrained = self.train_metrics.clone(prefix="val_constrained_")
+            self.val_metrics_constrained_per_class = self.train_metrics_per_class.clone(prefix="val_constrained_")
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.model(x)
@@ -99,11 +110,43 @@ class LitModel(pl.LightningModule):
             for i, v in enumerate(metric_values):
                 self.log(f"{metric_name}_{i}", v)
 
+        # Add constrained predictions if enabled
+        if self.use_sequence_constraints:
+            # Get log probs in shape (batch_size, seq_len, 4) for validator
+            log_probs = outputs.permute((0, 2, 1))  # Back to (batch, seq, classes)
+
+            # Get constrained predictions (returns labels 1-4, need to convert to 0-3)
+            constrained_preds = validate_and_correct_predictions(log_probs, method="viterbi") - 1
+
+            # Create one-hot outputs for metrics (metrics expect logits/probs)
+            # We'll use a simple approach: set high confidence for the constrained prediction
+            constrained_outputs = torch.zeros_like(outputs)
+            for b in range(outputs.shape[0]):
+                for t in range(outputs.shape[2]):
+                    constrained_outputs[b, constrained_preds[b, t], t] = 10.0  # High logit
+
+            constrained_metrics_per_class = self.val_metrics_constrained_per_class(constrained_outputs, y)
+            self.val_metrics_constrained_per_class.reset()
+
+            self.log_dict(
+                self.val_metrics_constrained(constrained_outputs, y),
+                prog_bar=False,
+                on_step=False,
+                on_epoch=True,
+            )
+
+            for metric_name, metric_values in constrained_metrics_per_class.items():
+                for i, v in enumerate(metric_values):
+                    self.log(f"{metric_name}_{i}", v)
+
         return loss
 
     def on_validation_epoch_end(self) -> None:
         self.val_metrics_per_class.reset()
         self.val_metrics.reset()
+        if self.use_sequence_constraints:
+            self.val_metrics_constrained_per_class.reset()
+            self.val_metrics_constrained.reset()
 
     def test_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> torch.Tensor:
         x, y = batch
@@ -120,11 +163,37 @@ class LitModel(pl.LightningModule):
             for i, v in enumerate(metric_values):
                 self.log(f"{metric_name}_{i}", v)
 
+        # Add constrained predictions if enabled
+        if self.use_sequence_constraints:
+            # Get log probs in shape (batch_size, seq_len, 4) for validator
+            log_probs = outputs.permute((0, 2, 1))  # Back to (batch, seq, classes)
+
+            # Get constrained predictions (returns labels 1-4, need to convert to 0-3)
+            constrained_preds = validate_and_correct_predictions(log_probs, method="viterbi") - 1
+
+            # Create one-hot outputs for metrics (metrics expect logits/probs)
+            constrained_outputs = torch.zeros_like(outputs)
+            for b in range(outputs.shape[0]):
+                for t in range(outputs.shape[2]):
+                    constrained_outputs[b, constrained_preds[b, t], t] = 10.0  # High logit
+
+            constrained_metrics_per_class = self.test_metrics_constrained_per_class(constrained_outputs, y)
+            self.test_metrics_constrained_per_class.reset()
+
+            self.log_dict(self.test_metrics_constrained(constrained_outputs, y))
+
+            for metric_name, metric_values in constrained_metrics_per_class.items():
+                for i, v in enumerate(metric_values):
+                    self.log(f"{metric_name}_{i}", v)
+
         return loss
 
     def on_test_epoch_end(self) -> None:
         self.test_metrics_per_class.reset()
         self.test_metrics.reset()
+        if self.use_sequence_constraints:
+            self.test_metrics_constrained_per_class.reset()
+            self.test_metrics_constrained.reset()
 
     def configure_optimizers(self) -> OptimizerLRScheduler:
         optimizer = Adam(self.parameters(), lr=0.01)
