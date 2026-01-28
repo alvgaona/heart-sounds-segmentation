@@ -1,8 +1,8 @@
 from typing import Optional
 
 import numpy.typing as npt
+import ssq
 import torch
-from fsst import fsst
 
 
 class FSST:
@@ -45,7 +45,7 @@ class FSST:
             Tuple: Original signal, STFT Synchrosqueezed Transform, STFT, and frequencies
 
         """
-        s, f, t = fsst(x.numpy(), self.fs, self.window)
+        s, f, t = ssq.fsst(x.numpy(), self.fs, self.window)
 
         s, f, t = (
             torch.tensor(s, dtype=torch.complex64),
