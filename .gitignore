@@ -14,9 +14,7 @@ __pycache__/
 .ruff_cache/
 
 # Zed
-.zed/*
-!.zed/settings.json
-!.zed/tasks.json
+.zed/
 
 # JetBrains
 .idea/

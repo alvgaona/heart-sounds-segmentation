@@ -154,7 +154,7 @@ class DavidSpringerHSS(Dataset):
 
         if in_memory:
             file_ids = list(walker if not count else islice(walker, count))
-            for file_id in track(file_ids, description="Loading Springer dataset...", disable=not verbose):
+            for file_id in track(file_ids, description="Loading dataset...", disable=not verbose):
                 x, y = self._load_file(file_id)
 
                 if framing:
@@ -163,7 +163,7 @@ class DavidSpringerHSS(Dataset):
 
                     frames, labels = frame_signal(x, y - 1, stride, frame_len)
 
-                    for _, (frame, label) in enumerate(zip(frames, labels, strict=False)):
+                    for frame, label in zip(frames, labels, strict=False):
                         frame_i, label_i = self._apply_transform(frame, label)
                         self.data.append((frame_i.to(self.dtype), label_i.squeeze(1)))
                     continue
