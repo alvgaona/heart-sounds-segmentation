@@ -71,7 +71,7 @@ pixi install
 Once it finishes downloading the dependencies on your machine, you will be able to run the training and evaluation.
 
 ```sh
-PYTHONPATH=. pixi run python main.py
+pixi run python main.py
 ```
 
 ## References

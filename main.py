@@ -1,3 +1,4 @@
+import os
 from typing import Tuple
 
 import lightning.pytorch as pl
@@ -65,14 +66,14 @@ class LitModel(pl.LightningModule):
 
     def training_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> torch.Tensor:
         x, y = batch
-        outputs = self(x).permute((0, 2, 1))
-        loss = self.loss_fn(outputs, y)
+        logits = self(x).permute((0, 2, 1))
+        loss = self.loss_fn(logits, y)
 
-        metrics_per_class = self.train_metrics_per_class(outputs, y)
+        metrics_per_class = self.train_metrics_per_class(logits, y)
         self.train_metrics_per_class.reset()
 
         self.log("train_loss", loss, prog_bar=True, on_step=True, on_epoch=True)
-        self.log_dict(self.train_metrics(outputs, y), prog_bar=True, on_step=True, on_epoch=True)
+        self.log_dict(self.train_metrics(logits, y), prog_bar=True, on_step=True, on_epoch=True)
 
         for metric_name, metric_values in metrics_per_class.items():
             for i, v in enumerate(metric_values):
@@ -86,14 +87,14 @@ class LitModel(pl.LightningModule):
 
     def validation_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> torch.Tensor:
         x, y = batch
-        outputs = self(x).permute((0, 2, 1))
-        loss = self.loss_fn(outputs, y)
+        logits = self(x).permute((0, 2, 1))
+        loss = self.loss_fn(logits, y)
 
-        metrics_per_class = self.val_metrics_per_class(outputs, y)
+        metrics_per_class = self.val_metrics_per_class(logits, y)
         self.val_metrics_per_class.reset()
 
         self.log("val_loss", loss, prog_bar=True, on_step=True, on_epoch=True)
-        self.log_dict(self.val_metrics(outputs, y), prog_bar=True, on_step=False, on_epoch=True)
+        self.log_dict(self.val_metrics(logits, y), prog_bar=True, on_step=False, on_epoch=True)
 
         for metric_name, metric_values in metrics_per_class.items():
             for i, v in enumerate(metric_values):
@@ -107,14 +108,14 @@ class LitModel(pl.LightningModule):
 
     def test_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> torch.Tensor:
         x, y = batch
-        outputs = self(x).permute((0, 2, 1))
-        loss = self.loss_fn(outputs, y)
+        logits = self(x).permute((0, 2, 1))
+        loss = self.loss_fn(logits, y)
 
-        metrics_per_class = self.test_metrics_per_class(outputs, y)
+        metrics_per_class = self.test_metrics_per_class(logits, y)
         self.test_metrics_per_class.reset()
 
         self.log("test_loss", loss)
-        self.log_dict(self.test_metrics(outputs, y))
+        self.log_dict(self.test_metrics(logits, y))
 
         for metric_name, metric_values in metrics_per_class.items():
             for i, v in enumerate(metric_values):
@@ -134,8 +135,18 @@ class LitModel(pl.LightningModule):
         return {"optimizer": optimizer, "lr_scheduler": scheduler}
 
 
+def get_device() -> tuple[torch.device, str]:
+    """Get the best available device and accelerator."""
+    if torch.cuda.is_available():
+        return torch.device("cuda"), "gpu"
+    elif torch.backends.mps.is_available():
+        return torch.device("mps"), "mps"
+    return torch.device("cpu"), "cpu"
+
+
 def main() -> None:
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device, accelerator = get_device()
+    print(f"Using device: {device} (accelerator: {accelerator})")
 
     transform = transforms.Compose(
         (
@@ -189,13 +200,21 @@ def main() -> None:
 
         # Create data loaders
         train_loader = DataLoader(
-            train_val_dataset, batch_size=batch_size, sampler=train_sampler,
-            num_workers=19, drop_last=True, persistent_workers=True,
+            train_val_dataset,
+            batch_size=batch_size,
+            sampler=train_sampler,
+            num_workers=os.cpu_count() or 4,
+            drop_last=True,
+            persistent_workers=True,
         )
 
         val_loader = DataLoader(
-            train_val_dataset, batch_size=batch_size, sampler=val_sampler,
-            num_workers=19, drop_last=True, persistent_workers=True,
+            train_val_dataset,
+            batch_size=batch_size,
+            sampler=val_sampler,
+            num_workers=os.cpu_count() or 4,
+            drop_last=True,
+            persistent_workers=True,
         )
 
         # Initialize model and training
@@ -204,7 +223,7 @@ def main() -> None:
 
         trainer = pl.Trainer(
             max_epochs=15,
-            accelerator="gpu" if torch.cuda.is_available() else "cpu",
+            accelerator=accelerator,
             gradient_clip_val=1,
             gradient_clip_algorithm="norm",
             callbacks=[early_stopping, RichProgressBar()],
@@ -214,7 +233,7 @@ def main() -> None:
         trainer.fit(model, train_loader, val_loader)
 
         # Create test loader from held-out test set
-        test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=19, drop_last=True)
+        test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=os.cpu_count() or 4, drop_last=True)
 
         # Test the model
         test_results = trainer.test(dataloaders=test_loader, ckpt_path="best")[0]
