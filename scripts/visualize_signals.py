@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import pandas as pd
+import ssq
 import torch
-from fsst import fsst
 from scipy import signal
 
 
@@ -11,7 +11,7 @@ if __name__ == "__main__":
     y = torch.tensor(df.loc[:, "Labels"].to_numpy(), dtype=torch.int64)
 
     window = signal.get_window(("kaiser", 0.5), 128, fftbins=False)
-    s, f, t = fsst(x.numpy(), fs=1000, window=window)
+    s, f, t = ssq.fsst(x.numpy(), 1000, window)
 
     # Plot input signal
     plt.figure(figsize=(12, 6))
