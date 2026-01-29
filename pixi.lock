@@ -1408,7 +1408,7 @@ packages:
 - pypi: ./
   name: heart-sounds-segmentation
   version: 1.0.0
-  sha256: b197ac4c82564ea2a0bffd4b8c1e1e5f3ff6e55198dc332ab3bbbf949e621707
+  sha256: ed070602d8718d2e5916f6656cab029e0b3f07ddb17d05308090ee550588cb7c
   requires_python: '>=3.11,<3.12'
 - conda: https://conda.anaconda.org/conda-forge/noarch/hpack-4.1.0-pyhd8ed1ab_0.conda
   sha256: 6ad78a180576c706aabeb5b4c8ceb97c0cb25f1e112d76495bff23e3779948ba

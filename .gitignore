@@ -1,3 +1,6 @@
+*.md
+!README.md
+
 resources/
 
 # Lightning AI
@@ -32,3 +35,7 @@ __pycache__/
 *.zip
 *.hea
 *.dat
+
+# Generated files
+*.png
+*.egg-info/
