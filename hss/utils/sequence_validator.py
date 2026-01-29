@@ -208,46 +208,14 @@ class CardiacCycleValidator:
         # Convert from 0-indexed to 1-indexed labels
         return best_paths + 1
 
-    def correct_sequence_greedy(self, labels: np.ndarray) -> np.ndarray:
-        """
-        Correct a sequence using a greedy forward pass.
 
-        This is simpler than Viterbi but doesn't use probability information.
-        It just fixes invalid transitions by adjusting the next label.
-
-        Args:
-            labels: Array of labels (1-4)
-
-        Returns:
-            np.ndarray: Corrected label sequence (1-4)
-        """
-        if len(labels) == 0:
-            return labels
-
-        corrected = labels.copy()
-
-        for i in range(len(corrected) - 1):
-            current_label = corrected[i]
-            next_label = corrected[i + 1]
-
-            if not self.is_valid_transition(current_label, next_label):
-                # Fix by setting next label to the only valid transition
-                # From label k, the only valid next label is (k % 4) + 1
-                corrected[i + 1] = (current_label % 4) + 1
-
-        return corrected
-
-
-def validate_and_correct_predictions(
-    log_probs: torch.Tensor | np.ndarray, method: str = "viterbi"
-) -> torch.Tensor | np.ndarray:
+def validate_and_correct_predictions(log_probs: torch.Tensor | np.ndarray) -> torch.Tensor | np.ndarray:
     """
-    Validate and correct predictions to follow cardiac cycle constraints.
+    Validate and correct predictions to follow cardiac cycle constraints using Viterbi algorithm.
 
     Args:
         log_probs: Log probabilities from model
                   Shape: (batch_size, sequence_length, 4) or (sequence_length, 4)
-        method: Correction method - "viterbi" or "greedy"
 
     Returns:
         Corrected predictions (1-4). Returns torch.Tensor if input was tensor,
@@ -265,26 +233,9 @@ def validate_and_correct_predictions(
 
     # Handle batch dimension
     if log_probs_np.ndim == 3:
-        if method == "viterbi":
-            result = validator.correct_batch_viterbi(log_probs_np)
-        elif method == "greedy":
-            batch_size, seq_len, num_classes = log_probs_np.shape
-            corrected_batch = np.zeros((batch_size, seq_len), dtype=int)
-            for i in range(batch_size):
-                uncorrected = np.argmax(log_probs_np[i], axis=1) + 1
-                corrected_batch[i] = validator.correct_sequence_greedy(uncorrected)
-            result = corrected_batch
-        else:
-            raise ValueError(f"Unknown method: {method}")
+        result = validator.correct_batch_viterbi(log_probs_np)
     else:
-        # Single sequence
-        if method == "viterbi":
-            result = validator.correct_sequence_viterbi(log_probs_np)
-        elif method == "greedy":
-            uncorrected = np.argmax(log_probs_np, axis=1) + 1
-            result = validator.correct_sequence_greedy(uncorrected)
-        else:
-            raise ValueError(f"Unknown method: {method}")
+        result = validator.correct_sequence_viterbi(log_probs_np)
 
     if return_torch:
         return torch.from_numpy(result)

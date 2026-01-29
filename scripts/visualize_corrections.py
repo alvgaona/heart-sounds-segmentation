@@ -59,7 +59,7 @@ def main():
 
         # Get corrected predictions
         log_probs = logits.permute((0, 2, 1))  # (batch, seq, classes)
-        corrected = validate_and_correct_predictions(log_probs, method="viterbi").squeeze().numpy()
+        corrected = validate_and_correct_predictions(log_probs).squeeze().numpy()
 
     ground_truth = y.numpy() + 1  # Convert to 1-indexed
 

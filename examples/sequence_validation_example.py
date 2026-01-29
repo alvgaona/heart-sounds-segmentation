@@ -69,34 +69,10 @@ def example_sequence_validation():
         print(f"  Position {pos}: {from_label} -> {to_label}")
 
 
-def example_greedy_correction():
-    """Demonstrate greedy sequence correction."""
-    print("\n" + "=" * 60)
-    print("EXAMPLE 3: Greedy Sequence Correction")
-    print("=" * 60)
-
-    validator = CardiacCycleValidator()
-
-    # Start with an invalid sequence
-    invalid_sequence = np.array([1, 3, 4, 2, 1, 2, 3, 1])
-    print(f"\nOriginal sequence: {invalid_sequence}")
-
-    is_valid, invalid_positions = validator.validate_sequence(invalid_sequence)
-    print(f"Valid: {is_valid}")
-    print(f"Invalid transitions at positions: {invalid_positions}")
-
-    # Correct the sequence
-    corrected = validator.correct_sequence_greedy(invalid_sequence)
-    print(f"\nCorrected sequence: {corrected}")
-
-    is_valid, invalid_positions = validator.validate_sequence(corrected)
-    print(f"Valid: {is_valid}")
-
-
 def example_viterbi_correction():
     """Demonstrate Viterbi-based correction with probabilities."""
     print("\n" + "=" * 60)
-    print("EXAMPLE 4: Viterbi Correction (Probability-Based)")
+    print("EXAMPLE 3: Viterbi Correction (Probability-Based)")
     print("=" * 60)
 
     validator = CardiacCycleValidator()
@@ -144,7 +120,7 @@ def example_viterbi_correction():
 def example_conflicting_probabilities():
     """Demonstrate Viterbi with conflicting probabilities."""
     print("\n" + "=" * 60)
-    print("EXAMPLE 5: Viterbi with Conflicting Probabilities")
+    print("EXAMPLE 4: Viterbi with Conflicting Probabilities")
     print("=" * 60)
 
     validator = CardiacCycleValidator()
@@ -172,7 +148,7 @@ def example_conflicting_probabilities():
         )
 
     unconstrained_preds = np.argmax(log_probs, axis=1) + 1
-    print(f"\nUnconstrained (greedy) predictions: {unconstrained_preds}")
+    print(f"\nUnconstrained (argmax) predictions: {unconstrained_preds}")
 
     is_valid, invalid_pos = validator.validate_sequence(unconstrained_preds)
     print(f"Valid? {is_valid}")
@@ -191,7 +167,7 @@ def example_conflicting_probabilities():
 def example_batch_processing():
     """Demonstrate batch processing."""
     print("\n" + "=" * 60)
-    print("EXAMPLE 6: Batch Processing")
+    print("EXAMPLE 5: Batch Processing")
     print("=" * 60)
 
     # Simulate batch of predictions
@@ -205,7 +181,7 @@ def example_batch_processing():
     print(f"\nProcessing batch of {batch_size} sequences, each with {seq_len} timesteps")
 
     # Apply validation to the entire batch
-    corrected = validate_and_correct_predictions(log_probs, method="viterbi")
+    corrected = validate_and_correct_predictions(log_probs)
 
     print("\nResults:")
     validator = CardiacCycleValidator()
@@ -232,7 +208,6 @@ def main():
 
     example_valid_transitions()
     example_sequence_validation()
-    example_greedy_correction()
     example_viterbi_correction()
     example_conflicting_probabilities()
     example_batch_processing()

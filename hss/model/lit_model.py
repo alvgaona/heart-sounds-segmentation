@@ -110,7 +110,7 @@ class LitModel(pl.LightningModule):
             log_probs = logits.permute((0, 2, 1))  # Back to (batch, seq, classes)
 
             # Get constrained predictions (returns labels 1-4, need to convert to 0-3)
-            constrained_preds = validate_and_correct_predictions(log_probs, method="viterbi") - 1
+            constrained_preds = validate_and_correct_predictions(log_probs) - 1
 
             # Create one-hot outputs for metrics (metrics expect logits/probs)
             # We'll use a simple approach: set high confidence for the constrained prediction
@@ -163,7 +163,7 @@ class LitModel(pl.LightningModule):
             log_probs = logits.permute((0, 2, 1))  # Back to (batch, seq, classes)
 
             # Get constrained predictions (returns labels 1-4, need to convert to 0-3)
-            constrained_preds = validate_and_correct_predictions(log_probs, method="viterbi") - 1
+            constrained_preds = validate_and_correct_predictions(log_probs) - 1
 
             # Create one-hot outputs for metrics (metrics expect logits/probs)
             constrained_outputs = torch.zeros_like(logits)
