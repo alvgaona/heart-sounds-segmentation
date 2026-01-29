@@ -25,55 +25,65 @@ class TestCardiacCycleValidator:
 
     def test_valid_transitions(self):
         """Test that valid transitions are recognized."""
-        # Valid transitions: 1->2, 2->3, 3->4, 4->1
-        assert self.validator.is_valid_transition(1, 2) is True
-        assert self.validator.is_valid_transition(2, 3) is True
-        assert self.validator.is_valid_transition(3, 4) is True
-        assert self.validator.is_valid_transition(4, 1) is True
+        # Valid forward transitions: 1->2, 2->3, 3->4, 4->1
+        assert self.validator.is_valid_transition(1, 2)
+        assert self.validator.is_valid_transition(2, 3)
+        assert self.validator.is_valid_transition(3, 4)
+        assert self.validator.is_valid_transition(4, 1)
 
     def test_invalid_transitions(self):
         """Test that invalid transitions are rejected."""
         # Invalid transitions
-        assert self.validator.is_valid_transition(1, 3) is False  # Skip state
-        assert self.validator.is_valid_transition(1, 4) is False
-        assert self.validator.is_valid_transition(2, 1) is False  # Backward
-        assert self.validator.is_valid_transition(2, 4) is False
-        assert self.validator.is_valid_transition(3, 1) is False
-        assert self.validator.is_valid_transition(3, 2) is False
-        assert self.validator.is_valid_transition(4, 2) is False
-        assert self.validator.is_valid_transition(4, 3) is False
+        assert not self.validator.is_valid_transition(1, 3)  # Skip state
+        assert not self.validator.is_valid_transition(1, 4)
+        assert not self.validator.is_valid_transition(2, 1)  # Backward
+        assert not self.validator.is_valid_transition(2, 4)
+        assert not self.validator.is_valid_transition(3, 1)
+        assert not self.validator.is_valid_transition(3, 2)
+        assert not self.validator.is_valid_transition(4, 2)
+        assert not self.validator.is_valid_transition(4, 3)
 
     def test_self_transitions(self):
-        """Test that self-transitions are invalid."""
-        assert self.validator.is_valid_transition(1, 1) is False
-        assert self.validator.is_valid_transition(2, 2) is False
-        assert self.validator.is_valid_transition(3, 3) is False
-        assert self.validator.is_valid_transition(4, 4) is False
+        """Test that self-transitions are valid (staying in same state)."""
+        assert self.validator.is_valid_transition(1, 1)
+        assert self.validator.is_valid_transition(2, 2)
+        assert self.validator.is_valid_transition(3, 3)
+        assert self.validator.is_valid_transition(4, 4)
 
     def test_out_of_bounds_transitions(self):
         """Test that out-of-bounds labels are rejected."""
-        assert self.validator.is_valid_transition(0, 1) is False
-        assert self.validator.is_valid_transition(1, 5) is False
-        assert self.validator.is_valid_transition(-1, 2) is False
+        assert not self.validator.is_valid_transition(0, 1)
+        assert not self.validator.is_valid_transition(1, 5)
+        assert not self.validator.is_valid_transition(-1, 2)
 
     def test_validate_valid_sequence(self):
         """Test validation of a valid sequence."""
         valid_sequence = np.array([1, 2, 3, 4, 1, 2, 3, 4])
         is_valid, invalid_positions = self.validator.validate_sequence(valid_sequence)
 
-        assert is_valid is True
+        assert is_valid
+        assert len(invalid_positions) == 0
+
+    def test_validate_valid_sequence_with_self_transitions(self):
+        """Test validation of a sequence with self-transitions."""
+        # Sequence with self-transitions (staying in same state)
+        valid_sequence = np.array([1, 1, 2, 2, 2, 3, 3, 4, 4, 1])
+        is_valid, invalid_positions = self.validator.validate_sequence(valid_sequence)
+
+        assert is_valid
         assert len(invalid_positions) == 0
 
     def test_validate_invalid_sequence(self):
         """Test validation of an invalid sequence."""
-        # Sequence with invalid transitions
-        invalid_sequence = np.array([1, 3, 4, 2, 1])  # 1->3 and 4->2 are invalid
+        # Sequence with invalid transitions: 1->3 (skip), 3->4 (valid), 4->2 (backward), 2->1 (backward)
+        invalid_sequence = np.array([1, 3, 4, 2, 1])
         is_valid, invalid_positions = self.validator.validate_sequence(invalid_sequence)
 
-        assert is_valid is False
-        assert len(invalid_positions) == 2
+        assert not is_valid
+        assert len(invalid_positions) == 3
         assert 0 in invalid_positions  # 1->3 at position 0
         assert 2 in invalid_positions  # 4->2 at position 2
+        assert 3 in invalid_positions  # 2->1 at position 3
 
     def test_correct_sequence_greedy(self):
         """Test greedy sequence correction."""
@@ -83,7 +93,7 @@ class TestCardiacCycleValidator:
 
         # Check that corrected sequence is valid
         is_valid, _ = self.validator.validate_sequence(corrected)
-        assert is_valid is True
+        assert is_valid
 
         # First element should remain unchanged
         assert corrected[0] == 1
@@ -96,7 +106,7 @@ class TestCardiacCycleValidator:
 
         # Set high probabilities for the valid sequence 1->2->3->4->1->2->3->4
         for i in range(seq_len):
-            label = (i % 4)
+            label = i % 4
             log_probs[i, label] = 0.0  # High log-prob
             # Set lower probs for other states
             for j in range(4):
@@ -107,7 +117,7 @@ class TestCardiacCycleValidator:
 
         # Check that corrected sequence is valid
         is_valid, _ = self.validator.validate_sequence(corrected)
-        assert is_valid is True
+        assert is_valid
 
         # Check expected sequence
         expected = np.array([1, 2, 3, 4, 1, 2, 3, 4])
@@ -117,35 +127,38 @@ class TestCardiacCycleValidator:
         """Test Viterbi when probabilities suggest invalid transitions."""
         # Create log probabilities that would prefer invalid sequence
         # but Viterbi should find the best valid sequence
-        seq_len = 4
-        log_probs = np.array([
-            [0.0, -5.0, -5.0, -5.0],   # Strongly prefers 1
-            [-5.0, -5.0, 0.0, -5.0],   # Strongly prefers 3 (invalid from 1)
-            [-5.0, -5.0, -5.0, 0.0],   # Strongly prefers 4
-            [0.0, -5.0, -5.0, -5.0],   # Strongly prefers 1
-        ])
+        log_probs = np.array(
+            [
+                [0.0, -5.0, -5.0, -5.0],  # Strongly prefers 1
+                [-5.0, -5.0, 0.0, -5.0],  # Strongly prefers 3 (invalid from 1)
+                [-5.0, -5.0, -5.0, 0.0],  # Strongly prefers 4
+                [0.0, -5.0, -5.0, -5.0],  # Strongly prefers 1
+            ]
+        )
 
         corrected = self.validator.correct_sequence_viterbi(log_probs)
 
         # Should find a valid path, even if not the highest probability
         is_valid, _ = self.validator.validate_sequence(corrected)
-        assert is_valid is True
+        assert is_valid
 
-        # Should start with 1 (highest initial prob)
-        assert corrected[0] == 1
+        # Viterbi finds optimal path 2->3->4->1 (score: -5+0+0+0 = -5)
+        # which is better than 1->2->3->4 (score: 0-5+0-5 = -10)
+        expected = np.array([2, 3, 4, 1])
+        np.testing.assert_array_equal(corrected, expected)
 
     def test_viterbi_return_score(self):
         """Test that Viterbi can return the score."""
-        log_probs = np.array([
-            [0.0, -1.0, -2.0, -3.0],
-            [-3.0, 0.0, -1.0, -2.0],
-            [-2.0, -3.0, 0.0, -1.0],
-            [-1.0, -2.0, -3.0, 0.0],
-        ])
-
-        corrected, score = self.validator.correct_sequence_viterbi(
-            log_probs, return_score=True
+        log_probs = np.array(
+            [
+                [0.0, -1.0, -2.0, -3.0],
+                [-3.0, 0.0, -1.0, -2.0],
+                [-2.0, -3.0, 0.0, -1.0],
+                [-1.0, -2.0, -3.0, 0.0],
+            ]
         )
+
+        corrected, score = self.validator.correct_sequence_viterbi(log_probs, return_score=True)
 
         assert isinstance(corrected, np.ndarray)
         assert isinstance(score, (float, np.floating))
@@ -153,7 +166,7 @@ class TestCardiacCycleValidator:
 
         # Check that sequence is valid
         is_valid, _ = self.validator.validate_sequence(corrected)
-        assert is_valid is True
+        assert is_valid
 
 
 class TestValidateAndCorrectPredictions:
@@ -161,12 +174,14 @@ class TestValidateAndCorrectPredictions:
 
     def test_with_numpy_single_sequence(self):
         """Test with numpy array, single sequence."""
-        log_probs = np.array([
-            [0.0, -1.0, -2.0, -3.0],
-            [-3.0, 0.0, -1.0, -2.0],
-            [-2.0, -3.0, 0.0, -1.0],
-            [-1.0, -2.0, -3.0, 0.0],
-        ])
+        log_probs = np.array(
+            [
+                [0.0, -1.0, -2.0, -3.0],
+                [-3.0, 0.0, -1.0, -2.0],
+                [-2.0, -3.0, 0.0, -1.0],
+                [-1.0, -2.0, -3.0, 0.0],
+            ]
+        )
 
         corrected = validate_and_correct_predictions(log_probs, method="viterbi")
 
@@ -175,16 +190,18 @@ class TestValidateAndCorrectPredictions:
 
         validator = CardiacCycleValidator()
         is_valid, _ = validator.validate_sequence(corrected)
-        assert is_valid is True
+        assert is_valid
 
     def test_with_torch_single_sequence(self):
         """Test with torch tensor, single sequence."""
-        log_probs = torch.tensor([
-            [0.0, -1.0, -2.0, -3.0],
-            [-3.0, 0.0, -1.0, -2.0],
-            [-2.0, -3.0, 0.0, -1.0],
-            [-1.0, -2.0, -3.0, 0.0],
-        ])
+        log_probs = torch.tensor(
+            [
+                [0.0, -1.0, -2.0, -3.0],
+                [-3.0, 0.0, -1.0, -2.0],
+                [-2.0, -3.0, 0.0, -1.0],
+                [-1.0, -2.0, -3.0, 0.0],
+            ]
+        )
 
         corrected = validate_and_correct_predictions(log_probs, method="viterbi")
 
@@ -193,7 +210,7 @@ class TestValidateAndCorrectPredictions:
 
         validator = CardiacCycleValidator()
         is_valid, _ = validator.validate_sequence(corrected.numpy())
-        assert is_valid is True
+        assert is_valid
 
     def test_with_batch(self):
         """Test with batched input."""
@@ -217,29 +234,33 @@ class TestValidateAndCorrectPredictions:
         validator = CardiacCycleValidator()
         for b in range(batch_size):
             is_valid, _ = validator.validate_sequence(corrected[b])
-            assert is_valid is True
+            assert is_valid
 
     def test_greedy_method(self):
         """Test greedy correction method."""
-        log_probs = np.array([
-            [0.0, -1.0, -2.0, -3.0],
-            [-3.0, 0.0, -1.0, -2.0],
-            [-2.0, -3.0, 0.0, -1.0],
-            [-1.0, -2.0, -3.0, 0.0],
-        ])
+        log_probs = np.array(
+            [
+                [0.0, -1.0, -2.0, -3.0],
+                [-3.0, 0.0, -1.0, -2.0],
+                [-2.0, -3.0, 0.0, -1.0],
+                [-1.0, -2.0, -3.0, 0.0],
+            ]
+        )
 
         corrected = validate_and_correct_predictions(log_probs, method="greedy")
 
         validator = CardiacCycleValidator()
         is_valid, _ = validator.validate_sequence(corrected)
-        assert is_valid is True
+        assert is_valid
 
     def test_invalid_method(self):
         """Test that invalid method raises error."""
-        log_probs = np.array([
-            [0.0, -1.0, -2.0, -3.0],
-            [-3.0, 0.0, -1.0, -2.0],
-        ])
+        log_probs = np.array(
+            [
+                [0.0, -1.0, -2.0, -3.0],
+                [-3.0, 0.0, -1.0, -2.0],
+            ]
+        )
 
         with pytest.raises(ValueError, match="Unknown method"):
             validate_and_correct_predictions(log_probs, method="invalid")
@@ -262,7 +283,7 @@ class TestEdgeCases:
         single = np.array([1])
 
         is_valid, invalid_positions = validator.validate_sequence(single)
-        assert is_valid is True
+        assert is_valid
         assert len(invalid_positions) == 0
 
         corrected = validator.correct_sequence_greedy(single)
@@ -276,7 +297,7 @@ class TestEdgeCases:
         long_sequence = np.tile([1, 2, 3, 4], 3)
 
         is_valid, invalid_positions = validator.validate_sequence(long_sequence)
-        assert is_valid is True
+        assert is_valid
         assert len(invalid_positions) == 0
 
     def test_all_same_probabilities(self):
@@ -290,4 +311,4 @@ class TestEdgeCases:
 
         # Should still produce a valid sequence
         is_valid, _ = validator.validate_sequence(corrected)
-        assert is_valid is True
+        assert is_valid
