@@ -30,8 +30,14 @@ def example_valid_transitions():
         is_valid = validator.is_valid_transition(from_label, to_label)
         print(f"  {from_label} -> {to_label}: {'✓ Valid' if is_valid else '✗ Invalid'}")
 
+    print("\nSelf-transitions (staying in same state - valid):")
+    self_transitions = [(1, 1), (2, 2), (3, 3), (4, 4)]
+    for from_label, to_label in self_transitions:
+        is_valid = validator.is_valid_transition(from_label, to_label)
+        print(f"  {from_label} -> {to_label}: {'✓ Valid' if is_valid else '✗ Invalid'}")
+
     print("\nInvalid transitions (violate cardiac cycle):")
-    invalid_transitions = [(1, 3), (4, 2), (2, 1), (3, 1), (1, 1)]
+    invalid_transitions = [(1, 3), (4, 2), (2, 1), (3, 1)]
     for from_label, to_label in invalid_transitions:
         is_valid = validator.is_valid_transition(from_label, to_label)
         print(f"  {from_label} -> {to_label}: {'✓ Valid' if is_valid else '✗ Invalid'}")
@@ -101,16 +107,18 @@ def example_viterbi_correction():
     print("Viterbi algorithm finds the best VALID sequence given these probabilities")
 
     # Sequence length of 8 timesteps
-    log_probs = np.array([
-        [0.0, -5.0, -5.0, -5.0],   # t=0: Strongly prefers label 1 (S1)
-        [-5.0, 0.0, -5.0, -5.0],   # t=1: Strongly prefers label 2 (Systole) ✓ valid from 1
-        [-5.0, -5.0, 0.0, -5.0],   # t=2: Strongly prefers label 3 (S2) ✓ valid from 2
-        [-5.0, -5.0, -5.0, 0.0],   # t=3: Strongly prefers label 4 (Diastole) ✓ valid from 3
-        [0.0, -5.0, -5.0, -5.0],   # t=4: Strongly prefers label 1 (S1) ✓ valid from 4
-        [-5.0, 0.0, -5.0, -5.0],   # t=5: Strongly prefers label 2 (Systole) ✓ valid from 1
-        [-5.0, -5.0, 0.0, -5.0],   # t=6: Strongly prefers label 3 (S2) ✓ valid from 2
-        [-5.0, -5.0, -5.0, 0.0],   # t=7: Strongly prefers label 4 (Diastole) ✓ valid from 3
-    ])
+    log_probs = np.array(
+        [
+            [0.0, -5.0, -5.0, -5.0],  # t=0: Strongly prefers label 1 (S1)
+            [-5.0, 0.0, -5.0, -5.0],  # t=1: Strongly prefers label 2 (Systole) ✓ valid from 1
+            [-5.0, -5.0, 0.0, -5.0],  # t=2: Strongly prefers label 3 (S2) ✓ valid from 2
+            [-5.0, -5.0, -5.0, 0.0],  # t=3: Strongly prefers label 4 (Diastole) ✓ valid from 3
+            [0.0, -5.0, -5.0, -5.0],  # t=4: Strongly prefers label 1 (S1) ✓ valid from 4
+            [-5.0, 0.0, -5.0, -5.0],  # t=5: Strongly prefers label 2 (Systole) ✓ valid from 1
+            [-5.0, -5.0, 0.0, -5.0],  # t=6: Strongly prefers label 3 (S2) ✓ valid from 2
+            [-5.0, -5.0, -5.0, 0.0],  # t=7: Strongly prefers label 4 (Diastole) ✓ valid from 3
+        ]
+    )
 
     print("\nLog probabilities (each row = probabilities for labels 1-4):")
     for t, probs in enumerate(log_probs):
@@ -145,12 +153,14 @@ def example_conflicting_probabilities():
     print("\nScenario: Model predictions strongly prefer INVALID transitions")
     print("Viterbi must find best valid path even if it has lower probability")
 
-    log_probs = np.array([
-        [0.0, -2.0, -5.0, -5.0],   # t=0: Prefers 1 (S1)
-        [-5.0, -5.0, 0.0, -2.0],   # t=1: Prefers 3 (S2) but 3 invalid from 1! Must choose 2
-        [-5.0, -5.0, -2.0, 0.0],   # t=2: Prefers 4 (Diastole) but 4 invalid from 2! Must choose 3
-        [0.0, -2.0, -5.0, -5.0],   # t=3: Prefers 1 (S1) but 1 invalid from 3! Must choose 4
-    ])
+    log_probs = np.array(
+        [
+            [0.0, -2.0, -5.0, -5.0],  # t=0: Prefers 1 (S1)
+            [-5.0, -5.0, 0.0, -2.0],  # t=1: Prefers 3 (S2) but 3 invalid from 1! Must choose 2
+            [-5.0, -5.0, -2.0, 0.0],  # t=2: Prefers 4 (Diastole) but 4 invalid from 2! Must choose 3
+            [0.0, -2.0, -5.0, -5.0],  # t=3: Prefers 1 (S1) but 1 invalid from 3! Must choose 4
+        ]
+    )
 
     print("\nLog probabilities:")
     for t, probs in enumerate(log_probs):

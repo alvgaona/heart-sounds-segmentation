@@ -5,6 +5,8 @@ Enforces the cardiac cycle constraint: S1 -> Systole -> S2 -> Diastole -> S1
 Labels: 1 -> 2 -> 3 -> 4 -> 1
 """
 
+from typing import Literal, overload
+
 import numpy as np
 import torch
 
@@ -38,11 +40,13 @@ class CardiacCycleValidator:
         # Initialize all transitions as invalid
         matrix = np.zeros((4, 4), dtype=bool)
 
-        # Valid transitions (0-indexed for array access):
-        # 0 (label 1: S1) -> 1 (label 2: Systole)
-        # 1 (label 2: Systole) -> 2 (label 3: S2)
-        # 2 (label 3: S2) -> 3 (label 4: Diastole)
-        # 3 (label 4: Diastole) -> 0 (label 1: S1)
+        # Self-transitions (staying in the same state)
+        matrix[0, 0] = True  # S1 -> S1
+        matrix[1, 1] = True  # Systole -> Systole
+        matrix[2, 2] = True  # S2 -> S2
+        matrix[3, 3] = True  # Diastole -> Diastole
+
+        # Forward transitions (0-indexed for array access):
         matrix[0, 1] = True  # S1 -> Systole
         matrix[1, 2] = True  # Systole -> S2
         matrix[2, 3] = True  # S2 -> Diastole
@@ -91,10 +95,16 @@ class CardiacCycleValidator:
 
         return len(invalid_positions) == 0, invalid_positions
 
+    @overload
+    def correct_sequence_viterbi(self, log_probs: np.ndarray, return_score: Literal[False] = ...) -> np.ndarray: ...
+
+    @overload
     def correct_sequence_viterbi(
-        self,
-        log_probs: np.ndarray,
-        return_score: bool = False
+        self, log_probs: np.ndarray, return_score: Literal[True]
+    ) -> tuple[np.ndarray, float]: ...
+
+    def correct_sequence_viterbi(
+        self, log_probs: np.ndarray, return_score: bool = False
     ) -> np.ndarray | tuple[np.ndarray, float]:
         """
         Correct a sequence using Viterbi algorithm with transition constraints.
@@ -117,7 +127,7 @@ class CardiacCycleValidator:
         seq_len, num_classes = log_probs.shape
         assert num_classes == 4, "Expected 4 classes for cardiac cycle"
 
-        # Viterbi algorithm
+        # Viterbi algorithm (vectorized)
         # viterbi[t][s] = max log probability of reaching state s at time t
         viterbi = np.full((seq_len, num_classes), -np.inf)
         # backpointer[t][s] = previous state that led to state s at time t
@@ -126,22 +136,18 @@ class CardiacCycleValidator:
         # Initialize: first timestep can be any state
         viterbi[0] = log_probs[0]
 
-        # Forward pass
+        # Precompute transition mask (invalid transitions become -inf)
+        trans_mask = np.where(self.transition_matrix, 0.0, -np.inf)
+
+        # Forward pass (vectorized over states)
         for t in range(1, seq_len):
-            for curr_state in range(num_classes):
-                # Find the best previous state that can transition to curr_state
-                max_prob = -np.inf
-                best_prev_state = 0
+            # scores[i, j] = viterbi[t-1, i] + trans_mask[i, j] + log_probs[t, j]
+            # Shape: (num_classes, num_classes)
+            scores = viterbi[t - 1, :, np.newaxis] + trans_mask + log_probs[t, np.newaxis, :]
 
-                for prev_state in range(num_classes):
-                    if self.transition_matrix[prev_state, curr_state]:
-                        prob = viterbi[t - 1, prev_state] + log_probs[t, curr_state]
-                        if prob > max_prob:
-                            max_prob = prob
-                            best_prev_state = prev_state
-
-                viterbi[t, curr_state] = max_prob
-                backpointer[t, curr_state] = best_prev_state
+            # Best previous state for each current state
+            backpointer[t] = np.argmax(scores, axis=0)
+            viterbi[t] = np.max(scores, axis=0)
 
         # Backtrack to find the best path
         best_path = np.zeros(seq_len, dtype=int)
@@ -157,6 +163,50 @@ class CardiacCycleValidator:
         if return_score:
             return corrected_labels, total_score
         return corrected_labels
+
+    def correct_batch_viterbi(self, log_probs: np.ndarray) -> np.ndarray:
+        """
+        Correct a batch of sequences using vectorized Viterbi algorithm.
+
+        Args:
+            log_probs: Log probabilities from model (batch_size, sequence_length, 4)
+
+        Returns:
+            np.ndarray: Corrected label sequences (batch_size, sequence_length) with labels 1-4
+        """
+        batch_size, seq_len, num_classes = log_probs.shape
+        assert num_classes == 4, "Expected 4 classes for cardiac cycle"
+
+        # Viterbi algorithm (vectorized over batch and states)
+        # viterbi[b, t, s] = max log probability of reaching state s at time t for batch b
+        viterbi = np.full((batch_size, seq_len, num_classes), -np.inf)
+        backpointer = np.zeros((batch_size, seq_len, num_classes), dtype=int)
+
+        # Initialize: first timestep can be any state
+        viterbi[:, 0, :] = log_probs[:, 0, :]
+
+        # Precompute transition mask
+        trans_mask = np.where(self.transition_matrix, 0.0, -np.inf)
+
+        # Forward pass (vectorized over batch and states)
+        for t in range(1, seq_len):
+            # scores[b, i, j] = viterbi[b, t-1, i] + trans_mask[i, j] + log_probs[b, t, j]
+            # Shape: (batch_size, num_classes, num_classes)
+            scores = viterbi[:, t - 1, :, np.newaxis] + trans_mask[np.newaxis, :, :] + log_probs[:, t, np.newaxis, :]
+
+            backpointer[:, t, :] = np.argmax(scores, axis=1)
+            viterbi[:, t, :] = np.max(scores, axis=1)
+
+        # Backtrack to find best paths
+        best_paths = np.zeros((batch_size, seq_len), dtype=int)
+        best_paths[:, -1] = np.argmax(viterbi[:, -1, :], axis=1)
+
+        for t in range(seq_len - 2, -1, -1):
+            for b in range(batch_size):
+                best_paths[b, t] = backpointer[b, t + 1, best_paths[b, t + 1]]
+
+        # Convert from 0-indexed to 1-indexed labels
+        return best_paths + 1
 
     def correct_sequence_greedy(self, labels: np.ndarray) -> np.ndarray:
         """
@@ -189,9 +239,8 @@ class CardiacCycleValidator:
 
 
 def validate_and_correct_predictions(
-    log_probs: torch.Tensor | np.ndarray,
-    method: str = "viterbi"
-) -> torch.Tensor:
+    log_probs: torch.Tensor | np.ndarray, method: str = "viterbi"
+) -> torch.Tensor | np.ndarray:
     """
     Validate and correct predictions to follow cardiac cycle constraints.
 
@@ -201,8 +250,8 @@ def validate_and_correct_predictions(
         method: Correction method - "viterbi" or "greedy"
 
     Returns:
-        torch.Tensor: Corrected predictions (1-4)
-                     Shape: (batch_size, sequence_length) or (sequence_length,)
+        Corrected predictions (1-4). Returns torch.Tensor if input was tensor,
+        np.ndarray otherwise. Shape: (batch_size, sequence_length) or (sequence_length,)
     """
     validator = CardiacCycleValidator()
 
@@ -216,20 +265,17 @@ def validate_and_correct_predictions(
 
     # Handle batch dimension
     if log_probs_np.ndim == 3:
-        batch_size, seq_len, num_classes = log_probs_np.shape
-        corrected_batch = np.zeros((batch_size, seq_len), dtype=int)
-
-        for i in range(batch_size):
-            if method == "viterbi":
-                corrected_batch[i] = validator.correct_sequence_viterbi(log_probs_np[i])
-            elif method == "greedy":
-                # For greedy, we need uncorrected predictions first
+        if method == "viterbi":
+            result = validator.correct_batch_viterbi(log_probs_np)
+        elif method == "greedy":
+            batch_size, seq_len, num_classes = log_probs_np.shape
+            corrected_batch = np.zeros((batch_size, seq_len), dtype=int)
+            for i in range(batch_size):
                 uncorrected = np.argmax(log_probs_np[i], axis=1) + 1
                 corrected_batch[i] = validator.correct_sequence_greedy(uncorrected)
-            else:
-                raise ValueError(f"Unknown method: {method}")
-
-        result = corrected_batch
+            result = corrected_batch
+        else:
+            raise ValueError(f"Unknown method: {method}")
     else:
         # Single sequence
         if method == "viterbi":
