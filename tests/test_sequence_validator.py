@@ -3,7 +3,6 @@ Unit tests for cardiac cycle sequence validation.
 """
 
 import numpy as np
-import pytest
 import torch
 
 from hss.utils.sequence_validator import (
@@ -84,19 +83,6 @@ class TestCardiacCycleValidator:
         assert 0 in invalid_positions  # 1->3 at position 0
         assert 2 in invalid_positions  # 4->2 at position 2
         assert 3 in invalid_positions  # 2->1 at position 3
-
-    def test_correct_sequence_greedy(self):
-        """Test greedy sequence correction."""
-        # Start with invalid sequence
-        invalid_sequence = np.array([1, 3, 4, 2, 1])
-        corrected = self.validator.correct_sequence_greedy(invalid_sequence)
-
-        # Check that corrected sequence is valid
-        is_valid, _ = self.validator.validate_sequence(corrected)
-        assert is_valid
-
-        # First element should remain unchanged
-        assert corrected[0] == 1
 
     def test_correct_sequence_viterbi(self):
         """Test Viterbi-based sequence correction."""
@@ -183,7 +169,7 @@ class TestValidateAndCorrectPredictions:
             ]
         )
 
-        corrected = validate_and_correct_predictions(log_probs, method="viterbi")
+        corrected = validate_and_correct_predictions(log_probs)
 
         assert isinstance(corrected, np.ndarray)
         assert corrected.shape == (4,)
@@ -203,7 +189,7 @@ class TestValidateAndCorrectPredictions:
             ]
         )
 
-        corrected = validate_and_correct_predictions(log_probs, method="viterbi")
+        corrected = validate_and_correct_predictions(log_probs)
 
         assert isinstance(corrected, torch.Tensor)
         assert corrected.shape == (4,)
@@ -227,7 +213,7 @@ class TestValidateAndCorrectPredictions:
                     if j != label:
                         log_probs[b, t, j] = -5.0
 
-        corrected = validate_and_correct_predictions(log_probs, method="viterbi")
+        corrected = validate_and_correct_predictions(log_probs)
 
         assert corrected.shape == (batch_size, seq_len)
 
@@ -235,35 +221,6 @@ class TestValidateAndCorrectPredictions:
         for b in range(batch_size):
             is_valid, _ = validator.validate_sequence(corrected[b])
             assert is_valid
-
-    def test_greedy_method(self):
-        """Test greedy correction method."""
-        log_probs = np.array(
-            [
-                [0.0, -1.0, -2.0, -3.0],
-                [-3.0, 0.0, -1.0, -2.0],
-                [-2.0, -3.0, 0.0, -1.0],
-                [-1.0, -2.0, -3.0, 0.0],
-            ]
-        )
-
-        corrected = validate_and_correct_predictions(log_probs, method="greedy")
-
-        validator = CardiacCycleValidator()
-        is_valid, _ = validator.validate_sequence(corrected)
-        assert is_valid
-
-    def test_invalid_method(self):
-        """Test that invalid method raises error."""
-        log_probs = np.array(
-            [
-                [0.0, -1.0, -2.0, -3.0],
-                [-3.0, 0.0, -1.0, -2.0],
-            ]
-        )
-
-        with pytest.raises(ValueError, match="Unknown method"):
-            validate_and_correct_predictions(log_probs, method="invalid")
 
 
 class TestEdgeCases:
@@ -274,8 +231,9 @@ class TestEdgeCases:
         validator = CardiacCycleValidator()
         empty = np.array([])
 
-        corrected = validator.correct_sequence_greedy(empty)
-        assert len(corrected) == 0
+        is_valid, invalid_positions = validator.validate_sequence(empty)
+        assert is_valid
+        assert len(invalid_positions) == 0
 
     def test_single_element_sequence(self):
         """Test handling of single element sequence."""
@@ -285,9 +243,6 @@ class TestEdgeCases:
         is_valid, invalid_positions = validator.validate_sequence(single)
         assert is_valid
         assert len(invalid_positions) == 0
-
-        corrected = validator.correct_sequence_greedy(single)
-        np.testing.assert_array_equal(corrected, single)
 
     def test_long_valid_sequence(self):
         """Test with a long valid sequence (multiple cycles)."""
