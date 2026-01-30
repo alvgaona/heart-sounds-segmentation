@@ -2,7 +2,8 @@
 
 import torch
 from torch import nn
-from torchcrf import CRF
+
+from hss.model.crf import CRF
 
 
 class HeartSoundSegmenterCRF(nn.Module):
@@ -73,7 +74,7 @@ class HeartSoundSegmenterCRF(nn.Module):
         )
 
         # CRF layer for sequence modeling
-        self.crf = CRF(num_tags=self.num_tags, batch_first=True)
+        self.crf = CRF(num_tags=self.num_tags)
 
         # Initialize CRF transitions with cardiac cycle constraints
         self._init_crf_transitions()
@@ -83,6 +84,8 @@ class HeartSoundSegmenterCRF(nn.Module):
 
         Valid transitions: 0->0, 0->1, 1->1, 1->2, 2->2, 2->3, 3->3, 3->0
         Invalid transitions get negative initialization to discourage them.
+
+        Note: transitions[i, j] = score for i -> j
         """
         with torch.no_grad():
             # Start with small negative values for all transitions
@@ -96,10 +99,18 @@ class HeartSoundSegmenterCRF(nn.Module):
             self.crf.transitions[3, 3] = 1.0  # Diastole -> Diastole
 
             # Forward transitions (cardiac cycle order)
-            self.crf.transitions[1, 0] = 1.0  # S1 -> Systole (0 -> 1)
-            self.crf.transitions[2, 1] = 1.0  # Systole -> S2 (1 -> 2)
-            self.crf.transitions[3, 2] = 1.0  # S2 -> Diastole (2 -> 3)
-            self.crf.transitions[0, 3] = 1.0  # Diastole -> S1 (3 -> 0)
+            self.crf.transitions[0, 1] = 1.0  # S1 -> Systole (0 -> 1)
+            self.crf.transitions[1, 2] = 1.0  # Systole -> S2 (1 -> 2)
+            self.crf.transitions[2, 3] = 1.0  # S2 -> Diastole (2 -> 3)
+            self.crf.transitions[3, 0] = 1.0  # Diastole -> S1 (3 -> 0)
+
+            # Start transitions: likely to start with S1 or Diastole
+            self.crf.start_transitions.fill_(-1.0)
+            self.crf.start_transitions[0] = 1.0  # S1
+            self.crf.start_transitions[3] = 0.5  # Diastole
+
+            # End transitions: any state is valid
+            self.crf.end_transitions.fill_(0.0)
 
     def _get_emissions(self, x: torch.Tensor) -> torch.Tensor:
         """Compute emission scores from input.
@@ -140,16 +151,16 @@ class HeartSoundSegmenterCRF(nn.Module):
             Negative log-likelihood loss (scalar)
         """
         emissions = self._get_emissions(x)
-        return -self.crf(emissions, tags)
+        return self.crf(emissions, tags)
 
-    def decode(self, x: torch.Tensor) -> list[list[int]]:
+    def decode(self, x: torch.Tensor) -> torch.Tensor:
         """Decode the best tag sequence using Viterbi algorithm.
 
         Args:
             x: Input tensor of shape (batch_size, sequence_length, input_size)
 
         Returns:
-            List of best tag sequences for each sample in batch
+            Best tag sequences (batch_size, sequence_length)
         """
         emissions = self._get_emissions(x)
         return self.crf.decode(emissions)

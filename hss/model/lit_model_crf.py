@@ -64,21 +64,17 @@ class LitModelCRF(pl.LightningModule):
 
     def _decode_to_logits(self, x: torch.Tensor) -> torch.Tensor:
         """Decode CRF and convert to one-hot logits for metrics."""
-        decoded = self.model.decode(x)
-        batch_size, seq_len = len(decoded), len(decoded[0])
+        decoded = self.model.decode(x)  # (batch_size, seq_len)
+        batch_size, seq_len = decoded.shape
 
-        # Create one-hot logits from decoded sequences
+        # Create one-hot logits from decoded sequences (vectorized)
         logits = torch.zeros(batch_size, 4, seq_len, device=x.device)
-        for b, seq in enumerate(decoded):
-            for t, tag in enumerate(seq):
-                logits[b, tag, t] = 10.0  # High logit for predicted class
+        logits.scatter_(1, decoded.unsqueeze(1), 10.0)
 
         return logits
 
     def training_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> torch.Tensor:
         x, y = batch
-
-        # CRF loss (negative log-likelihood)
         loss = self.model.loss(x, y)
 
         # Decode for metrics
