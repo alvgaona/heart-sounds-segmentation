@@ -1,29 +1,41 @@
 #!/usr/bin/env python3
-"""Find samples where the model produces invalid transitions."""
+"""Find samples where the CRF model produces invalid transitions."""
 
 import scipy
 import torch
 from torchvision import transforms
 
 from hss.datasets.heart_sounds import DavidSpringerHSS
-from hss.model.lit_model import LitModel
+from hss.model.lit_model_crf import LitModelCRF
 from hss.transforms import FSST
 from hss.utils.sequence_validator import CardiacCycleValidator
 
 
+CHECKPOINT_PATH = "lightning_logs/version_0/checkpoints/epoch=14-step=1920.ckpt"
+
+
+def get_device() -> torch.device:
+    """Get the best available device."""
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+    elif torch.backends.mps.is_available():
+        return torch.device("mps")
+    return torch.device("cpu")
+
+
 def main():
+    device = get_device()
+    print(f"Using device: {device}")
+
     # Load model
-    checkpoint_path = "lightning_logs/version_12/checkpoints/epoch=14-step=1920.ckpt"
-    model = LitModel.load_from_checkpoint(
-        checkpoint_path,
+    model = LitModelCRF.load_from_checkpoint(
+        CHECKPOINT_PATH,
         input_size=44,
         batch_size=1,
-        device=torch.device("cpu"),
-        use_sequence_constraints=True,
-        weights_only=False,
+        device=device,
     )
     model.eval()
-    model.to("cpu")
+    model.to(device)
 
     # Load dataset
     transform = transforms.Compose(
@@ -48,19 +60,20 @@ def main():
 
     validator = CardiacCycleValidator()
 
-    # Search for samples with invalid transitions (stop after finding 10)
+    # Search for samples with invalid transitions
     print("Searching for samples with invalid transitions...")
     samples_with_errors = []
 
     for idx in range(len(dataset)):
         x, y = dataset[idx]
-        x = x.unsqueeze(0)
+        x = x.unsqueeze(0).to(device)
 
         with torch.no_grad():
-            logits = model(x).permute((0, 2, 1))
-            uncorrected = torch.argmax(logits, dim=1).squeeze().numpy() + 1  # 1-indexed
+            # CRF decode returns tensor (batch, seq_len) with 0-indexed tags
+            decoded = model.model.decode(model.model._get_emissions(x))
+            predictions = decoded.squeeze().cpu().numpy() + 1  # Convert to 1-indexed
 
-        _, invalid_pos = validator.validate_sequence(uncorrected)
+        _, invalid_pos = validator.validate_sequence(predictions)
 
         if len(invalid_pos) > 0:
             samples_with_errors.append((idx, len(invalid_pos), invalid_pos[:5]))

@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader, SubsetRandomSampler
 from torchvision import transforms
 
 from hss.datasets.heart_sounds import DavidSpringerHSS
-from hss.model.lit_model import LitModel
+from hss.model.lit_model_crf import LitModelCRF
 from hss.transforms import FSST
 
 
@@ -97,7 +97,11 @@ def main() -> None:
         )
 
         # Initialize model and training
-        model = LitModel(input_size=44, batch_size=batch_size, device=device)
+        model = LitModelCRF(
+            input_size=44,
+            batch_size=batch_size,
+            device=device,
+        )
         early_stopping = EarlyStopping("val_loss", patience=6, check_finite=True)
 
         trainer = pl.Trainer(
