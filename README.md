@@ -43,7 +43,11 @@ comprehensive performance assessment:
 - F1 Score: Harmonic mean of precision and recall
 - Area under the ROC (AUROC): Overall classification performance
 
-The model was trained using `torch.float32` precision, achieving these results across all metrics as shown below:
+All models were trained using `torch.float32` precision.
+
+### LSTM + CrossEntropy
+
+The baseline model uses a bidirectional LSTM with CrossEntropy loss:
 
 | Class     | Accuracy (mean ± std)  | Precision (mean ± std) | Recall (mean ± std)  | F1 (mean ± std)    | AUROC (mean ± std)    |
 |-----------|------------------------|------------------------|----------------------|--------------------|-----------------------|
@@ -53,11 +57,23 @@ The model was trained using `torch.float32` precision, achieving these results a
 | Dias. int | 0.9585 ± 0.0078        | 0.9623 ± 0.0059        | 0.9585 ± 0.0078      | 0.9604 ± 0.0055    | 0.9939 ± 0.0018       |
 | Average   | 0.9167 ± 0.0114        | 0.9152 ± 0.0118        | 0.9167 ± 0.0114      | 0.9159 ± 0.0099    | 0.9930 ± 0.0019       |
 
+### LSTM + CRF
+
+Adding a Conditional Random Field (CRF) layer on top of the LSTM improves sequence modeling by learning transition
+probabilities between cardiac states. The CRF enforces valid state transitions (S1 → Systole → S2 → Diastole → S1)
+during both training and inference:
+
+| Class     | Accuracy (mean ± std)  | Precision (mean ± std) | Recall (mean ± std)    | F1 (mean ± std)        | AUROC (mean ± std)     |
+|-----------|------------------------|------------------------|------------------------|------------------------|------------------------|
+| S1        | 0.9239 ± 0.0115        | 0.9191 ± 0.0131        | 0.9239 ± 0.0115        | 0.9214 ± 0.0088        | 0.9949 ± 0.0010        |
+| Sys. int  | 0.9399 ± 0.0126        | 0.9469 ± 0.0101        | 0.9399 ± 0.0126        | 0.9433 ± 0.0076        | 0.9958 ± 0.0011        |
+| S2        | 0.9106 ± 0.0166        | 0.9154 ± 0.0073        | 0.9106 ± 0.0166        | 0.9128 ± 0.0073        | 0.9955 ± 0.0007        |
+| Dias. int | 0.9715 ± 0.0053        | 0.9691 ± 0.0083        | 0.9715 ± 0.0053        | 0.9702 ± 0.0040        | 0.9959 ± 0.0007        |
+| Average   | 0.9365 ± 0.0115        | 0.9376 ± 0.0097        | 0.9365 ± 0.0115        | 0.9369 ± 0.0069        | 0.9955 ± 0.0008        |
+
 > [!NOTE]
-> While these metrics may appear elevated compared to those in the original 2020 publication, the improvements are primarily
-> attributed to fine-tuned training loop conditions and hyperparameter optimization rather than fundamental architectural
-> changes. The marginal gains achieved through these adjustments suggest that the original model design was already
-> well-optimized for this specific segmentation task.
+> AUROC is computed using marginal probabilities from the forward-backward algorithm, which properly incorporates the
+> learned transition constraints. The CRF model outperforms the baseline across all metrics.
 
 ## Usage
 
