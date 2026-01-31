@@ -1,7 +1,7 @@
 """Fast CRF implementation using JIT compilation and parallel scan."""
 
 import torch
-from torch import nn, Tensor
+from torch import Tensor, nn
 
 
 @torch.jit.script
@@ -233,6 +233,43 @@ def _viterbi_decode(emissions: Tensor, transitions: Tensor, start_transitions: T
     return best_path
 
 
+@torch.jit.script
+def _compute_marginals(
+    emissions: Tensor, transitions: Tensor, start_transitions: Tensor, end_transitions: Tensor
+) -> Tensor:
+    """Compute marginal probabilities P(y_t = k | x) using forward-backward algorithm.
+
+    Args:
+        emissions: (batch_size, seq_len, num_tags)
+        transitions: (num_tags, num_tags)
+        start_transitions: (num_tags,)
+        end_transitions: (num_tags,)
+
+    Returns:
+        Marginal probabilities: (batch_size, seq_len, num_tags)
+    """
+    batch_size, seq_len, num_tags = emissions.shape
+
+    # Forward pass: α_t(k) = P(x_1...x_t, y_t=k)
+    forward = torch.zeros(batch_size, seq_len, num_tags, device=emissions.device, dtype=emissions.dtype)
+    forward[:, 0] = emissions[:, 0] + start_transitions
+    for i in range(1, seq_len):
+        broadcast_score = forward[:, i - 1].unsqueeze(2) + transitions.unsqueeze(0) + emissions[:, i].unsqueeze(1)
+        forward[:, i] = torch.logsumexp(broadcast_score, dim=1)
+
+    # Backward pass: β_t(k) = P(x_{t+1}...x_T | y_t=k)
+    backward = torch.zeros(batch_size, seq_len, num_tags, device=emissions.device, dtype=emissions.dtype)
+    backward[:, -1] = end_transitions
+    for i in range(seq_len - 2, -1, -1):
+        broadcast_score = transitions.unsqueeze(0) + emissions[:, i + 1].unsqueeze(1) + backward[:, i + 1].unsqueeze(1)
+        backward[:, i] = torch.logsumexp(broadcast_score, dim=2)
+
+    # Marginals: P(y_t = k | x) = α_t(k) * β_t(k) / Z
+    log_Z = torch.logsumexp(forward[:, -1] + end_transitions, dim=1, keepdim=True)
+    log_marginals = forward + backward - log_Z.unsqueeze(2)
+    return torch.softmax(log_marginals, dim=2)
+
+
 class CRF(nn.Module):
     """Fast CRF layer with JIT-compiled forward and decode."""
 
@@ -280,3 +317,14 @@ class CRF(nn.Module):
             Best tag sequences (batch_size, seq_len)
         """
         return _viterbi_decode(emissions, self.transitions, self.start_transitions, self.end_transitions)
+
+    def marginals(self, emissions: Tensor) -> Tensor:
+        """Compute marginal probabilities P(y_t = k | x) using forward-backward.
+
+        Args:
+            emissions: (batch_size, seq_len, num_tags)
+
+        Returns:
+            Marginal probabilities (batch_size, seq_len, num_tags)
+        """
+        return _compute_marginals(emissions, self.transitions, self.start_transitions, self.end_transitions)
