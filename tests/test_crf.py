@@ -2,9 +2,15 @@
 
 import pytest
 import torch
-from torch import nn
 
-from hss.model.crf import CRF, _forward_algorithm, _forward_algorithm_parallel, _compute_score, _viterbi_decode
+from hss.model.crf import (
+    CRF,
+    _compute_marginals,
+    _compute_score,
+    _forward_algorithm,
+    _forward_algorithm_parallel,
+    _viterbi_decode,
+)
 
 
 class TestCRFBasics:
@@ -326,6 +332,79 @@ class TestCRFDevice:
 
         decoded = crf.decode(emissions)
         assert decoded.device.type == "mps"
+
+
+class TestMarginals:
+    """Tests for marginal probability computation (forward-backward algorithm)."""
+
+    def test_output_shape(self):
+        crf = CRF(num_tags=4)
+        emissions = torch.randn(3, 15, 4)
+        marginals = crf.marginals(emissions)
+        assert marginals.shape == (3, 15, 4)
+
+    def test_marginals_sum_to_one(self):
+        """Marginal probabilities at each position should sum to 1."""
+        crf = CRF(num_tags=4)
+        emissions = torch.randn(3, 15, 4)
+        marginals = crf.marginals(emissions)
+        sums = marginals.sum(dim=2)
+        torch.testing.assert_close(sums, torch.ones(3, 15), rtol=1e-4, atol=1e-4)
+
+    def test_marginals_are_probabilities(self):
+        """Marginals should be between 0 and 1."""
+        crf = CRF(num_tags=4)
+        emissions = torch.randn(3, 15, 4)
+        marginals = crf.marginals(emissions)
+        assert (marginals >= 0).all()
+        assert (marginals <= 1).all()
+
+    def test_strong_emissions_high_marginals(self):
+        """When emissions strongly favor a state, marginals should be high for that state."""
+        crf = CRF(num_tags=4)
+        with torch.no_grad():
+            crf.transitions.fill_(0.0)
+            crf.start_transitions.fill_(0.0)
+            crf.end_transitions.fill_(0.0)
+
+        emissions = torch.full((2, 10, 4), -10.0)
+        emissions[:, :, 0] = 10.0
+
+        marginals = crf.marginals(emissions)
+        assert (marginals[:, :, 0] > 0.99).all()
+
+    def test_single_timestep(self):
+        """For single timestep, marginals should be softmax of emit + start + end."""
+        emissions = torch.randn(2, 1, 4)
+        transitions = torch.randn(4, 4)
+        start_trans = torch.randn(4)
+        end_trans = torch.randn(4)
+
+        marginals = _compute_marginals(emissions, transitions, start_trans, end_trans)
+        expected = torch.softmax(emissions[:, 0] + start_trans + end_trans, dim=1)
+        torch.testing.assert_close(marginals[:, 0], expected, rtol=1e-4, atol=1e-4)
+
+    def test_consistent_with_viterbi(self):
+        """Argmax of marginals should often match Viterbi."""
+        crf = CRF(num_tags=4)
+        emissions = torch.randn(5, 20, 4)
+
+        marginals = crf.marginals(emissions)
+        viterbi = crf.decode(emissions)
+        marginal_argmax = marginals.argmax(dim=2)
+
+        match_rate = (marginal_argmax == viterbi).float().mean()
+        assert match_rate > 0.8
+
+    def test_batch_independence(self):
+        """Marginals for each batch element should be computed independently."""
+        crf = CRF(num_tags=4)
+        emissions = torch.randn(3, 10, 4)
+        batch_marginals = crf.marginals(emissions)
+
+        for i in range(3):
+            individual = crf.marginals(emissions[i : i + 1])
+            torch.testing.assert_close(batch_marginals[i : i + 1], individual, rtol=1e-4, atol=1e-4)
 
 
 class TestCRFEdgeCases:

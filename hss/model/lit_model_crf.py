@@ -43,7 +43,10 @@ class LitModelCRF(pl.LightningModule):
 
         self.val_metrics_per_class = self.train_metrics_per_class.clone(prefix="val_")
         self.test_metrics_per_class = self.train_metrics_per_class.clone(prefix="test_")
-        self.test_metrics_per_class.add_metrics(AUROC(task="multiclass", average=None, num_classes=num_classes))
+
+        # AUROC uses marginal probabilities (from forward-backward) instead of decoded predictions
+        self.test_auroc_per_class = AUROC(task="multiclass", average=None, num_classes=num_classes)
+        self.test_auroc = AUROC(task="multiclass", average="macro", num_classes=num_classes)
 
         self.train_metrics = MetricCollection(
             {
@@ -57,7 +60,6 @@ class LitModelCRF(pl.LightningModule):
 
         self.val_metrics = self.train_metrics.clone(prefix="val_")
         self.test_metrics = self.train_metrics.clone(prefix="test_")
-        self.test_metrics.add_metrics(AUROC(task="multiclass", average="macro", num_classes=num_classes))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.model(x)
@@ -72,6 +74,16 @@ class LitModelCRF(pl.LightningModule):
         logits.scatter_(1, decoded.unsqueeze(1), 10.0)
 
         return logits
+
+    def _marginals_to_logits(self, x: torch.Tensor) -> torch.Tensor:
+        """Compute marginal probabilities and format for metrics.
+
+        Uses forward-backward algorithm to get P(y_t = k | x), which properly
+        incorporates learned CRF transition constraints into the probabilities.
+        """
+        marginals = self.model.marginals(x)  # (batch_size, seq_len, num_tags)
+        # Permute to (batch_size, num_tags, seq_len) for torchmetrics
+        return marginals.permute(0, 2, 1)
 
     def training_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> torch.Tensor:
         x, y = batch
@@ -127,14 +139,21 @@ class LitModelCRF(pl.LightningModule):
         # CRF loss
         loss = self.model.loss(x, y)
 
-        # Decode for metrics
-        logits = self._decode_to_logits(x)
+        # Decode for accuracy/precision/recall/F1 metrics
+        decoded_logits = self._decode_to_logits(x)
 
-        metrics_per_class = self.test_metrics_per_class(logits, y)
+        # Marginals for AUROC (forward-backward algorithm)
+        marginal_logits = self._marginals_to_logits(x)
+
+        metrics_per_class = self.test_metrics_per_class(decoded_logits, y)
         self.test_metrics_per_class.reset()
 
+        # Update AUROC with marginal probabilities
+        self.test_auroc_per_class.update(marginal_logits, y)
+        self.test_auroc.update(marginal_logits, y)
+
         self.log("test_loss", loss)
-        self.log_dict(self.test_metrics(logits, y))
+        self.log_dict(self.test_metrics(decoded_logits, y))
 
         for metric_name, metric_values in metrics_per_class.items():
             for i, v in enumerate(metric_values):
@@ -143,8 +162,16 @@ class LitModelCRF(pl.LightningModule):
         return loss
 
     def on_test_epoch_end(self) -> None:
+        # Log AUROC computed from marginal probabilities
+        auroc_per_class = self.test_auroc_per_class.compute()
+        for i, v in enumerate(auroc_per_class):
+            self.log(f"test_AUROC_{i}", v)
+        self.log("test_AUROC", self.test_auroc.compute())
+
         self.test_metrics_per_class.reset()
         self.test_metrics.reset()
+        self.test_auroc_per_class.reset()
+        self.test_auroc.reset()
 
     def configure_optimizers(self) -> OptimizerLRScheduler:
         optimizer = Adam(self.parameters(), lr=0.01)
