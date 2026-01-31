@@ -1,3 +1,4 @@
+import gc
 import os
 
 import lightning.pytorch as pl
@@ -135,14 +136,20 @@ def main() -> None:
                 metric_key = f"test_{metric}_{i}"
                 fold_metrics[i][metric][fold_idx] = test_results[metric_key]
 
+        # Clean up to prevent memory accumulation across folds
+        del model, trainer, train_loader, val_loader, test_loader
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
     for i, metrics in enumerate(fold_metrics):
         print(f"Class {i}")
         print("---")
-        print(f"Accuracy: {torch.mean(metrics['accuracy'])}")
-        print(f"Precision: {torch.mean(metrics['precision'])}")
-        print(f"Recall: {torch.mean(metrics['recall'])}")
-        print(f"F1: {torch.mean(metrics['f1'])}")
-        print(f"AUROC: {torch.mean(metrics['MulticlassAUROC'])}\n")
+        print(f"Accuracy: {torch.mean(metrics['accuracy']):.4f} ± {torch.std(metrics['accuracy']):.4f}")
+        print(f"Precision: {torch.mean(metrics['precision']):.4f} ± {torch.std(metrics['precision']):.4f}")
+        print(f"Recall: {torch.mean(metrics['recall']):.4f} ± {torch.std(metrics['recall']):.4f}")
+        print(f"F1: {torch.mean(metrics['f1']):.4f} ± {torch.std(metrics['f1']):.4f}")
+        print(f"AUROC: {torch.mean(metrics['MulticlassAUROC']):.4f} ± {torch.std(metrics['MulticlassAUROC']):.4f}\n")
 
 
 if __name__ == "__main__":

@@ -35,10 +35,8 @@ class HeartSoundSegmenter(nn.Module):
 
         D = 2 if bidirectional else 1
 
-        self.h0, self.c0 = (
-            torch.randn(D, batch_size, hidden_size, device=self.device, dtype=dtype),
-            torch.randn(D, batch_size, hidden_size, device=self.device, dtype=dtype),
-        )
+        self.register_buffer("h0", torch.randn(D, batch_size, hidden_size, device=self.device, dtype=dtype))
+        self.register_buffer("c0", torch.randn(D, batch_size, hidden_size, device=self.device, dtype=dtype))
 
         self.lstm_1 = nn.LSTM(
             input_size=input_size,
