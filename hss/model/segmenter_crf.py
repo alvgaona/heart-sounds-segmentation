@@ -42,10 +42,8 @@ class HeartSoundSegmenterCRF(nn.Module):
 
         D = 2 if bidirectional else 1
 
-        self.h0, self.c0 = (
-            torch.randn(D, batch_size, hidden_size, device=self.device, dtype=dtype),
-            torch.randn(D, batch_size, hidden_size, device=self.device, dtype=dtype),
-        )
+        self.register_buffer("h0", torch.randn(D, batch_size, hidden_size, device=self.device, dtype=dtype))
+        self.register_buffer("c0", torch.randn(D, batch_size, hidden_size, device=self.device, dtype=dtype))
 
         self.lstm_1 = nn.LSTM(
             input_size=input_size,
@@ -164,3 +162,15 @@ class HeartSoundSegmenterCRF(nn.Module):
         """
         emissions = self._get_emissions(x)
         return self.crf.decode(emissions)
+
+    def marginals(self, x: torch.Tensor) -> torch.Tensor:
+        """Compute marginal probabilities P(y_t = k | x) using forward-backward.
+
+        Args:
+            x: Input tensor of shape (batch_size, sequence_length, input_size)
+
+        Returns:
+            Marginal probabilities (batch_size, sequence_length, num_tags)
+        """
+        emissions = self._get_emissions(x)
+        return self.crf.marginals(emissions)
