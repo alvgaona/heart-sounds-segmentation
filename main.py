@@ -10,8 +10,8 @@ from sklearn.model_selection import KFold
 from torch.utils.data import DataLoader, SubsetRandomSampler
 from torchvision import transforms
 
-from hss.datasets.heart_sounds import DavidSpringerHSS
-from hss.model.lit_model_crf import LitModelCRF
+from hss.datasets import DavidSpringerHSS
+from hss.model.lit_model_semi_crf import LitModelSemiCRF
 from hss.transforms import FSST
 
 
@@ -97,11 +97,19 @@ def main() -> None:
             persistent_workers=True,
         )
 
-        # Initialize model and training
-        model = LitModelCRF(
+        # Initialize Semi-Markov CRF model with duration priors
+        # At 50 Hz (FSST output rate), durations in frames:
+        # S1: ~100-150ms -> 5-8 frames
+        # Systole: ~200-300ms -> 10-15 frames
+        # S2: ~80-120ms -> 4-6 frames
+        # Diastole: ~300-500ms -> 15-25 frames
+        model = LitModelSemiCRF(
             input_size=44,
             batch_size=batch_size,
             device=device,
+            max_duration=50,  # 1 second max at 50Hz, covers all states including slow diastole
+            duration_means=[6.0, 12.0, 5.0, 20.0],
+            duration_stds=[2.0, 4.0, 2.0, 8.0],
         )
         early_stopping = EarlyStopping("val_loss", patience=6, check_finite=True)
 
