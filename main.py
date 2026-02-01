@@ -14,6 +14,8 @@ from hss.datasets import DavidSpringerHSS
 from hss.model.lit_model_semi_crf import LitModelSemiCRF
 from hss.transforms import FSST
 
+SEED = 68
+
 
 def get_device() -> tuple[torch.device, str]:
     """Get the best available device and accelerator."""
@@ -54,12 +56,12 @@ def main() -> None:
     train_val_size = len(hss_dataset) - test_size
 
     train_val_dataset, test_dataset = torch.utils.data.random_split(
-        hss_dataset, [train_val_size, test_size], generator=torch.Generator().manual_seed(68)
+        hss_dataset, [train_val_size, test_size], generator=torch.Generator().manual_seed(SEED)
     )
 
     # Now do k-fold cross validation on the train+val portion
     n_splits = 10
-    kfold = KFold(n_splits=n_splits, shuffle=True, random_state=68)
+    kfold = KFold(n_splits=n_splits, shuffle=True, random_state=SEED)
 
     # Initialize lists to store metrics for each fold
     fold_metrics = [
@@ -75,8 +77,8 @@ def main() -> None:
 
     for fold_idx, (train_idx, val_idx) in enumerate(kfold.split(range(train_val_size))):
         # Create samplers for data loading
-        train_sampler = SubsetRandomSampler(train_idx)
-        val_sampler = SubsetRandomSampler(val_idx)
+        train_sampler = SubsetRandomSampler(train_idx, generator=torch.Generator().manual_seed(SEED + fold_idx))
+        val_sampler = SubsetRandomSampler(val_idx, generator=torch.Generator().manual_seed(SEED + fold_idx))
 
         # Create data loaders
         train_loader = DataLoader(
