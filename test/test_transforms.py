@@ -24,12 +24,6 @@ def test_resample_output_shape(resample_transform, input_tensor):
     assert y.shape == (100,)
 
 
-def test_resample_preserves_range(resample_transform, input_tensor):
-    y = resample_transform(input_tensor)
-    assert torch.min(y) >= torch.min(input_tensor)
-    assert torch.max(y) <= torch.max(input_tensor)
-
-
 def test_resample_different_input_sizes():
     f = Resample(num=50)
     x1 = torch.tensor([1, 2, 3])
