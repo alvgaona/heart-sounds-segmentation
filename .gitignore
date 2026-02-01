@@ -39,3 +39,4 @@ __pycache__/
 # Generated files
 *.png
 *.egg-info/
+data/
