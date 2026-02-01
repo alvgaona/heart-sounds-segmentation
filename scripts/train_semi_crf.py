@@ -42,7 +42,7 @@ def main() -> None:
     )
 
     hss_dataset = DavidSpringerHSS(
-        "resources/data",
+        "data",
         download=True,
         framing=True,
         in_memory=True,
