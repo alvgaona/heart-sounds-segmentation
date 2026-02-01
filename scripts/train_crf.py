@@ -11,7 +11,7 @@ from lightning.pytorch.callbacks import EarlyStopping, RichProgressBar
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
-from hss.datasets.heart_sounds import DavidSpringerHSS
+from hss.datasets import DavidSpringerHSS
 from hss.model.lit_model_crf import LitModelCRF
 from hss.transforms import FSST
 

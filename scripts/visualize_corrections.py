@@ -6,7 +6,7 @@ import scipy
 import torch
 from torchvision import transforms
 
-from hss.datasets.heart_sounds import DavidSpringerHSS
+from hss.datasets import DavidSpringerHSS
 from hss.model.lit_model import LitModel
 from hss.transforms import FSST
 from hss.utils.sequence_validator import CardiacCycleValidator, validate_and_correct_predictions
