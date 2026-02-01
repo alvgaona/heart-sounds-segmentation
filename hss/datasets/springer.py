@@ -1,16 +1,13 @@
-import os
-from itertools import islice
+from pathlib import Path
 
 import pandas as pd
 import torch
 import torchvision.transforms
+from huggingface_hub import snapshot_download
 from rich.progress import track
-from torch.hub import download_url_to_file
 from torch.utils.data import Dataset
-from torchaudio.datasets.utils import _extract_zip as extract_zip
 
 from hss.transforms import Resample
-from hss.utils.files import walk_files
 from hss.utils.preprocess import frame_signal
 
 
@@ -32,6 +29,9 @@ def collate_fn(batch):
 
 
 class DavidSpringerHSS(Dataset):
+    REPO_ID = "alvgaona/heart-sounds"
+    FOLDER_NAME = "springer"
+
     def __init__(
         self,
         dst: str,
@@ -45,31 +45,25 @@ class DavidSpringerHSS(Dataset):
         dtype: torch.dtype = torch.float32,
         verbose: bool = True,
     ) -> None:
-        self.dst = dst
+        self.root = Path(dst)
         self.transform = transform
         self.dtype = dtype
         self.in_memory = in_memory
-        self.data = []
+        self.data: list[tuple[torch.Tensor, torch.Tensor]] = []
 
-        url = "https://pub-db0cd070a4f94dabb9b58161850d4868.r2.dev/heart-sounds/springer_sounds.zip"
-        basename, archive_ext = os.path.basename(url).split(".")
-        dataset_path = os.path.join(self.dst, basename)
+        dataset_path = self.root / self.FOLDER_NAME
 
-        if download and not os.path.isdir(dataset_path) and not os.path.isfile(basename + "." + archive_ext):
-            os.makedirs(dst, exist_ok=True)
-            download_url_to_file(url, f"{dst}/{basename}.{archive_ext}")
-            extract_zip(
-                os.path.join(f"{dst}/{basename}.{archive_ext}"),
-                to_path=dst,
-            )
-            os.remove(os.path.join(f"{dst}/{basename}.{archive_ext}"))
+        if download and not dataset_path.exists():
+            self._download()
 
-        walker = walk_files(dataset_path, suffix=".csv", prefix=True, remove_suffix=True)
+        # Get sorted list of parquet files
+        self.recordings = sorted(dataset_path.glob("*.parquet"))
+        if count is not None:
+            self.recordings = self.recordings[:count]
 
         if in_memory:
-            file_ids = list(walker if not count else islice(walker, count))
-            for file_id in track(file_ids, description="Loading dataset...", disable=not verbose):
-                x, y = self._load_file(file_id)
+            for path in track(self.recordings, description="Loading dataset...", disable=not verbose):
+                x, y = self._load_recording(path)
 
                 if framing:
                     if len(x) < frame_len:
@@ -84,30 +78,34 @@ class DavidSpringerHSS(Dataset):
 
                 self.data.append((x, y))
 
-        self.walker = list(walker)
-
-    def __getitem__(self, n):
+    def __getitem__(self, n: int) -> tuple[torch.Tensor, torch.Tensor]:
         if self.in_memory:
             return self.data[n]
 
-        file_id = self.walker[n]
-        try:
-            x, y = self._load_file(file_id)
-            return self._apply_transform(x, y)
-        except RuntimeError:
-            print(f"Error produced for file {os.path.basename(file_id) + '.csv'}")
+        path = self.recordings[n]
+        x, y = self._load_recording(path)
+        return self._apply_transform(x, y)
 
     def __len__(self) -> int:
-        return len(self.walker) or len(self.data)
+        return len(self.data) if self.in_memory else len(self.recordings)
 
     @staticmethod
     def collate_fn(batch):
         return collate_fn(batch)
 
-    def _load_file(self, file_id: str) -> tuple[torch.Tensor, torch.Tensor]:
-        df = pd.read_csv(file_id + ".csv", skiprows=1, names=["Signals", "Labels"])
-        x = torch.tensor(df.loc[:, "Signals"].to_numpy(), dtype=self.dtype)
-        y = torch.tensor(df.loc[:, "Labels"].to_numpy(), dtype=torch.int64)
+    def _download(self) -> None:
+        """Download the dataset from HuggingFace Hub."""
+        snapshot_download(
+            repo_id=self.REPO_ID,
+            repo_type="dataset",
+            local_dir=self.root,
+            allow_patterns=f"{self.FOLDER_NAME}/*",
+        )
+
+    def _load_recording(self, path: Path) -> tuple[torch.Tensor, torch.Tensor]:
+        df = pd.read_parquet(path)
+        x = torch.tensor(df["signals"].to_numpy(), dtype=self.dtype)
+        y = torch.tensor(df["labels"].to_numpy(), dtype=torch.int64)
         return x, y
 
     def _apply_transform(self, x: torch.Tensor, y: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:

@@ -35,11 +35,11 @@ def transform(fs: int) -> transforms.Compose:
 
 
 springer_available = pytest.mark.skipif(
-    not (DATASET_PATH / "springer_sounds").exists(),
+    not (DATASET_PATH / "springer").exists(),
     reason="Springer dataset not downloaded",
 )
 circor_available = pytest.mark.skipif(
-    not (DATASET_PATH / "circor_sounds").exists(),
+    not (DATASET_PATH / "circor").exists(),
     reason="CirCor dataset not downloaded",
 )
 
@@ -104,7 +104,7 @@ def test_circor_dataset_loads(dataset_path: str) -> None:
         assert x.ndim == 1
         assert y.ndim == 1
         assert x.shape[0] == y.shape[0]
-        assert y.min() >= -1 and y.max() <= 3  # -1 = unannotated
+        assert y.min() >= -1 and y.max() <= 4  # -1=unannotated, 1=S1, 2=Systole, 3=S2, 4=Diastole
 
 
 @circor_available
