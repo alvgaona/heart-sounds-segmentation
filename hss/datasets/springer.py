@@ -44,11 +44,13 @@ class DavidSpringerHSS(Dataset):
         transform: torchvision.transforms.Compose | None = None,
         dtype: torch.dtype = torch.float32,
         verbose: bool = True,
+        token: str | None = None,
     ) -> None:
         self.root = Path(dst)
         self.transform = transform
         self.dtype = dtype
         self.in_memory = in_memory
+        self.token = token
         self.data: list[tuple[torch.Tensor, torch.Tensor]] = []
 
         dataset_path = self.root / self.FOLDER_NAME
@@ -100,6 +102,7 @@ class DavidSpringerHSS(Dataset):
             repo_type="dataset",
             local_dir=self.root,
             allow_patterns=f"{self.FOLDER_NAME}/*",
+            token=self.token,
         )
 
     def _load_recording(self, path: Path) -> tuple[torch.Tensor, torch.Tensor]:

@@ -3,6 +3,9 @@
 
 import os
 
+# Set your HuggingFace token here for Colab
+HF_TOKEN = None  # e.g., "hf_xxxxx"
+
 import lightning.pytorch as pl
 import scipy
 import torch
@@ -47,6 +50,7 @@ def main() -> None:
         framing=True,
         in_memory=True,
         transform=transform,
+        token=HF_TOKEN,
     )
 
     batch_size = 50
