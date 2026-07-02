@@ -952,104 +952,13 @@ class SemiMarkovCRF(nn.Module):
         _, segments = self._viterbi_decode(emissions)
         return segments
 
-    def _backward_algorithm(self, emissions: Tensor) -> Tensor:
-        """Compute backward variables for Semi-Markov CRF (vectorized).
-
-        β[t, s] = log-sum of scores of paths from t to end, where a segment of state s
-        starts at time t.
-
-        Args:
-            emissions: (batch_size, seq_len, num_tags)
-
-        Returns:
-            beta: (batch_size, seq_len + 1, num_tags)
-        """
-        batch_size, seq_len, num_tags = emissions.shape
-        device = emissions.device
-        dtype = emissions.dtype
-        D = min(self.max_duration, seq_len)
-
-        # Precompute scores
-        dur_scores = self._precompute_duration_scores(device)[:D]  # (D, K)
-        segment_emissions = self._compute_segment_emissions(emissions)  # (B, T+1, D, K)
-
-        # beta[t, s] = log-sum of scores starting at t in state s
-        beta = torch.full((batch_size, seq_len + 1, num_tags), NEG_INF, device=device, dtype=dtype)
-
-        # Initialize: beta[T, s] = end_transitions[s] (empty segment at the end)
-        beta[:, seq_len, :] = self.end_transitions.unsqueeze(0)
-
-        # Transition scores with self-transitions masked
-        trans_scores = self.transitions.clone()
-        trans_scores.fill_diagonal_(NEG_INF)
-
-        # Backward pass: from T-1 down to 0
-        for t in range(seq_len - 1, -1, -1):
-            num_valid_d = min(seq_len - t, D)
-
-            # end_t values for d = 1..num_valid_d
-            end_t_indices = torch.arange(t + 1, t + 1 + num_valid_d, device=device)  # (D',)
-
-            # Duration scores for d = 1..num_valid_d: (D', K_curr)
-            d_scores = dur_scores[:num_valid_d, :]
-
-            # Segment emissions for segments starting at t: (B, D', K_curr)
-            seg_emit = segment_emissions[:, end_t_indices, torch.arange(num_valid_d, device=device), :]
-
-            # === Case 1: Segments ending at seq_len (end_t == seq_len) ===
-            # Score = dur[d, s] + emit[d, s] + end_trans[s]
-            end_mask = end_t_indices == seq_len  # (D',)
-
-            if end_mask.any():
-                # d_scores: (D', K), seg_emit: (B, D', K), end_trans: (K,)
-                end_score = d_scores + self.end_transitions  # (D', K)
-                end_score = end_score.unsqueeze(0) + seg_emit  # (B, D', K)
-                # Mask to only include segments that end at seq_len
-                end_score = torch.where(end_mask.view(1, -1, 1), end_score, torch.full_like(end_score, NEG_INF))
-            else:
-                end_score = torch.full((batch_size, num_valid_d, num_tags), NEG_INF, device=device, dtype=dtype)
-
-            # === Case 2: Segments followed by another segment ===
-            # Score = dur[d, s] + emit[d, s] + logsumexp_next_s(beta[end_t, next_s] + trans[s, next_s])
-            cont_mask = end_t_indices < seq_len  # (D',)
-
-            if cont_mask.any():
-                # Gather beta values for all end_t positions
-                next_beta = beta[:, end_t_indices, :]  # (B, D', K_next)
-
-                # For each current state s, compute logsumexp over next states
-                # trans_scores[s, next_s]: (K_curr, K_next)
-                # next_beta: (B, D', K_next) -> (B, D', 1, K_next)
-                # trans_scores: (K_curr, K_next) -> (1, 1, K_curr, K_next)
-
-                next_beta_exp = next_beta.unsqueeze(2)  # (B, D', 1, K_next)
-                trans_exp = trans_scores.unsqueeze(0).unsqueeze(0)  # (1, 1, K_curr, K_next)
-
-                # Combined: (B, D', K_curr, K_next)
-                combined = next_beta_exp + trans_exp
-
-                # Logsumexp over K_next: (B, D', K_curr)
-                transition_score = torch.logsumexp(combined, dim=-1)
-
-                # Add duration and emission scores: (B, D', K_curr)
-                cont_score = transition_score + d_scores.unsqueeze(0) + seg_emit
-
-                # Mask to only include segments that don't end at seq_len
-                neg_inf_fill = torch.full_like(cont_score, NEG_INF)
-                cont_score = torch.where(cont_mask.view(1, -1, 1), cont_score, neg_inf_fill)
-            else:
-                cont_score = torch.full((batch_size, num_valid_d, num_tags), NEG_INF, device=device, dtype=dtype)
-
-            # Combine both cases and logsumexp over durations
-            all_scores = torch.logaddexp(end_score, cont_score)  # (B, D', K)
-            beta[:, t, :] = torch.logsumexp(all_scores, dim=1)  # (B, K)
-
-        return beta
-
     def marginals(self, emissions: Tensor) -> Tensor:
         """Compute marginal probabilities P(y_t = k | x) using forward-backward (vectorized).
 
-        For Semi-Markov CRF, this requires summing over all segments that contain time t.
+        Reuses the same cumsum-based emission-marginal computation as the custom backward pass
+        (`_compute_expected_stats`). That quantity is exactly ∂log_Z/∂emissions = P(y_t = k | x), and
+        it is O(T·D) vectorized — far cheaper than the previous explicit O(T·K·D²) sum over every
+        segment containing each frame, which made the test/AUROC path dominate wall-clock time.
 
         Args:
             emissions: (batch_size, seq_len, num_tags)
@@ -1057,117 +966,39 @@ class SemiMarkovCRF(nn.Module):
         Returns:
             Marginal probabilities: (batch_size, seq_len, num_tags)
         """
-        batch_size, seq_len, num_tags = emissions.shape
+        seq_len = emissions.shape[1]
         device = emissions.device
-        dtype = emissions.dtype
-        D = min(self.max_duration, seq_len)
 
-        # Precompute scores
-        dur_scores = self._precompute_duration_scores(device)[:D]
+        dur_scores = self._precompute_duration_scores(device)[: min(self.max_duration, seq_len)]
         segment_emissions = self._compute_segment_emissions(emissions)
+        diag = torch.eye(self.num_tags, dtype=torch.bool, device=device)
+        trans_scores = self.transitions.masked_fill(diag, NEG_INF)
 
-        # Transition scores with self-transitions masked
-        trans_scores = self.transitions.clone()
-        trans_scores.fill_diagonal_(NEG_INF)
+        alpha, log_Z = _forward_pass(
+            segment_emissions,
+            dur_scores,
+            trans_scores,
+            self.start_transitions,
+            self.end_transitions,
+            seq_len,
+            self.max_duration,
+        )
+        beta = _backward_pass(
+            segment_emissions, dur_scores, trans_scores, self.end_transitions, seq_len, self.max_duration
+        )
+        marginals, _, _, _, _ = _compute_expected_stats(
+            alpha,
+            beta,
+            segment_emissions,
+            dur_scores,
+            trans_scores,
+            self.start_transitions,
+            self.end_transitions,
+            log_Z,
+            seq_len,
+            self.max_duration,
+        )
 
-        # Forward pass (reuse vectorized logic from _forward_algorithm)
-        alpha = torch.full((batch_size, seq_len + 1, num_tags), NEG_INF, device=device, dtype=dtype)
-
-        for t in range(1, seq_len + 1):
-            # Case 1: Segments starting from t=0
-            if t <= D:
-                start_score = self.start_transitions + dur_scores[t - 1, :] + segment_emissions[:, t, t - 1, :]
-            else:
-                start_score = torch.full((batch_size, num_tags), NEG_INF, device=device, dtype=dtype)
-
-            # Case 2: Segments following previous segments
-            if t > 1:
-                num_valid_d = min(t - 1, D)
-                prev_t_indices = torch.arange(t - 1, t - 1 - num_valid_d, -1, device=device)
-                prev_alpha = alpha[:, prev_t_indices, :]  # (B, D', K)
-                d_scores = dur_scores[:num_valid_d, :]  # (D', K)
-                seg_emit = segment_emissions[:, t, :num_valid_d, :]  # (B, D', K)
-
-                prev_alpha_exp = prev_alpha.unsqueeze(-1)  # (B, D', K_prev, 1)
-                trans_exp = trans_scores.unsqueeze(0).unsqueeze(0)  # (1, 1, K_prev, K_next)
-                d_scores_exp = d_scores.unsqueeze(0).unsqueeze(2)  # (1, D', 1, K_next)
-                seg_emit_exp = seg_emit.unsqueeze(2)  # (B, D', 1, K_next)
-
-                combined = prev_alpha_exp + trans_exp + d_scores_exp + seg_emit_exp
-                combined_flat = combined.view(batch_size, -1, num_tags)
-                case2_score = torch.logsumexp(combined_flat, dim=1)
-            else:
-                case2_score = torch.full((batch_size, num_tags), NEG_INF, device=device, dtype=dtype)
-
-            alpha[:, t, :] = torch.logsumexp(torch.stack([start_score, case2_score], dim=-1), dim=-1)
-
-        # Backward pass
-        beta = self._backward_algorithm(emissions)
-
-        # Compute log partition function
-        log_Z = torch.logsumexp(alpha[:, seq_len, :] + self.end_transitions, dim=1)  # (B,)
-
-        # Compute marginals using segment-level computation
-        # For Semi-Markov CRF: P(y_t = k) = sum over segments containing t with state k
-        # This is equivalent to: sum_{start <= t < end} P(segment(k, start, end) | x)
-
-        # Segment probability = prefix_score + dur_score + emit_score + suffix_score - log_Z
-        # where:
-        #   prefix_score = alpha[start, :] + trans[:, k] if start > 0, else start_trans[k]
-        #   suffix_score = trans[k, :] + beta[end, :] if end < T, else end_trans[k]
-
-        # Precompute prefix scores: for each (start, k), the score to reach start and transition to k
-        # prefix[start, k] = logsumexp_prev(alpha[start, prev] + trans[prev, k]) for start > 0
-        #                  = start_trans[k] for start == 0
-        prefix_scores = torch.full((batch_size, seq_len + 1, num_tags), NEG_INF, device=device, dtype=dtype)
-        prefix_scores[:, 0, :] = self.start_transitions.unsqueeze(0)
-
-        for start in range(1, seq_len + 1):
-            # alpha[:, start, :]: (B, K_prev)
-            # trans_scores: (K_prev, K_next)
-            combined = alpha[:, start, :].unsqueeze(-1) + trans_scores.unsqueeze(0)  # (B, K_prev, K_next)
-            prefix_scores[:, start, :] = torch.logsumexp(combined, dim=1)  # (B, K_next)
-
-        # Precompute suffix scores: for each (end, k), the score from end to sequence end
-        # suffix[end, k] = logsumexp_next(trans[k, next] + beta[end, next]) for end < T
-        #                = end_trans[k] for end == T
-        suffix_scores = torch.full((batch_size, seq_len + 1, num_tags), NEG_INF, device=device, dtype=dtype)
-        suffix_scores[:, seq_len, :] = self.end_transitions.unsqueeze(0)
-
-        for end in range(seq_len):
-            # beta[:, end, :]: (B, K_next)
-            # trans_scores: (K_curr, K_next)
-            combined = trans_scores.unsqueeze(0) + beta[:, end, :].unsqueeze(1)  # (B, K_curr, K_next)
-            suffix_scores[:, end, :] = torch.logsumexp(combined, dim=2)  # (B, K_curr)
-
-        # Now compute marginals by summing over all segments containing each time t
-        log_marginals = torch.full((batch_size, seq_len, num_tags), NEG_INF, device=device, dtype=dtype)
-
-        for t in range(seq_len):
-            # For each state k, sum over all segments (start, end) where start <= t < end
-            for k in range(num_tags):
-                segment_scores = []
-
-                # Iterate over possible (start, end) pairs containing t
-                for start in range(max(0, t - D + 1), t + 1):
-                    max_end = min(seq_len, start + D)
-                    for end in range(t + 1, max_end + 1):
-                        d = end - start
-                        # Segment score = prefix[start, k] + dur[d-1, k] + emit[end, d-1, k] + suffix[end, k]
-                        score = (
-                            prefix_scores[:, start, k]
-                            + dur_scores[d - 1, k]
-                            + segment_emissions[:, end, d - 1, k]
-                            + suffix_scores[:, end, k]
-                        )
-                        segment_scores.append(score)
-
-                if segment_scores:
-                    stacked = torch.stack(segment_scores, dim=1)  # (B, num_segments)
-                    log_marginals[:, t, k] = torch.logsumexp(stacked, dim=1)
-
-        # Normalize by partition function
-        log_marginals = log_marginals - log_Z.unsqueeze(1).unsqueeze(2)
-
-        # Convert to probabilities
-        return torch.softmax(log_marginals, dim=2)
+        # Guard against tiny numerical drift so each row is a proper distribution.
+        marginals = marginals.clamp_min(0.0)
+        return marginals / marginals.sum(dim=-1, keepdim=True).clamp_min(1e-12)
