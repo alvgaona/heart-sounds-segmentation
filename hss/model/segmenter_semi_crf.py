@@ -101,8 +101,10 @@ class HeartSoundSegmenterSemiCRF(nn.Module):
         Returns:
             Emission scores of shape (batch_size, sequence_length, num_tags)
         """
-        h0 = self.h0[:, : x.shape[0], :]
-        c0 = self.c0[:, : x.shape[0], :]
+        # .contiguous() because slicing a partial batch (x.shape[0] < batch_size) yields a
+        # non-contiguous view, which the CUDA LSTM kernel rejects ("rnn: hx is not contiguous").
+        h0 = self.h0[:, : x.shape[0], :].contiguous()
+        c0 = self.c0[:, : x.shape[0], :].contiguous()
 
         out, _ = self.lstm_1(x, (h0, c0))
         out = self.dropout(out)
