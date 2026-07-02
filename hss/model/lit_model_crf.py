@@ -142,15 +142,18 @@ class LitModelCRF(pl.LightningModule):
         # Decode for accuracy/precision/recall/F1 metrics
         decoded_logits = self._decode_to_logits(x)
 
-        # Marginals for AUROC (forward-backward algorithm)
-        marginal_logits = self._marginals_to_logits(x)
+        # Marginals for AUROC (forward-backward algorithm). Compute AUROC on CPU: torchmetrics'
+        # AUROC sort/threshold logic returns garbage on Apple MPS for the trained model's sharply
+        # peaked probabilities (observed 0.0 / huge values on MPS vs a correct ~0.99 on CPU).
+        marginal_logits = self._marginals_to_logits(x).detach().cpu()
+        y_cpu = y.cpu()
 
         metrics_per_class = self.test_metrics_per_class(decoded_logits, y)
         self.test_metrics_per_class.reset()
 
-        # Update AUROC with marginal probabilities
-        self.test_auroc_per_class.update(marginal_logits, y)
-        self.test_auroc.update(marginal_logits, y)
+        # Update AUROC with marginal probabilities (on CPU, see note above)
+        self.test_auroc_per_class.update(marginal_logits, y_cpu)
+        self.test_auroc.update(marginal_logits, y_cpu)
 
         self.log("test_loss", loss)
         self.log_dict(self.test_metrics(decoded_logits, y))
