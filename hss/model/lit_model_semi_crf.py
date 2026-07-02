@@ -1,6 +1,6 @@
 """PyTorch Lightning module for heart sound segmentation with Semi-Markov CRF."""
 
-from typing import Tuple
+from typing import Literal, Tuple
 
 import lightning.pytorch as pl
 import torch
@@ -11,6 +11,7 @@ from torchmetrics import MetricCollection
 from torchmetrics.classification import AUROC, Accuracy, F1Score, Precision, Recall
 
 from hss.model.segmenter_semi_crf import HeartSoundSegmenterSemiCRF
+from hss.utils.sequence_validator import validate_and_correct_predictions
 
 
 class LitModelSemiCRF(pl.LightningModule):
@@ -26,6 +27,7 @@ class LitModelSemiCRF(pl.LightningModule):
         max_duration: Maximum segment duration in frames
         duration_means: Initial mean duration for each state (S1, Systole, S2, Diastole)
         duration_stds: Initial std duration for each state
+        forward_algorithm: Which forward algorithm to use ("sequential" or "parallel")
     """
 
     def __init__(
@@ -36,9 +38,12 @@ class LitModelSemiCRF(pl.LightningModule):
         max_duration: int = 500,
         duration_means: list[float] | None = None,
         duration_stds: list[float] | None = None,
+        forward_algorithm: Literal["sequential", "parallel"] = "sequential",
+        lr: float = 0.001,
     ) -> None:
         super().__init__()
         self.save_hyperparameters(ignore=["device"])
+        self.lr = lr
 
         self.model = HeartSoundSegmenterSemiCRF(
             input_size=input_size,
@@ -47,6 +52,7 @@ class LitModelSemiCRF(pl.LightningModule):
             max_duration=max_duration,
             duration_means=duration_means,
             duration_stds=duration_stds,
+            forward_algorithm=forward_algorithm,
         )
         self.batch_size = batch_size
         num_classes = 4
@@ -84,26 +90,22 @@ class LitModelSemiCRF(pl.LightningModule):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.model(x)
 
-    def _decode_to_logits(self, x: torch.Tensor) -> torch.Tensor:
-        """Decode Semi-Markov CRF and convert to one-hot logits for metrics."""
-        decoded = self.model.decode(x)  # (batch_size, seq_len)
-        batch_size, seq_len = decoded.shape
+    def _valid_preds_and_marginals(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        """Compute posterior marginals once and derive the guaranteed-valid decode.
 
-        # Create one-hot logits from decoded sequences (vectorized)
-        logits = torch.zeros(batch_size, 4, seq_len, device=x.device)
-        logits.scatter_(1, decoded.unsqueeze(1), 10.0)
+        Hard metrics use constrained-posterior decoding (frame-level constrained Viterbi over the
+        forward-backward marginals): high per-frame accuracy AND a valid cardiac cycle on every
+        sequence. AUROC uses the raw marginal probabilities. The joint-MAP `decode` is not used here
+        because it produces sequences that break the S1→Systole→S2→Diastole ordering.
 
-        return logits
-
-    def _marginals_to_logits(self, x: torch.Tensor) -> torch.Tensor:
-        """Compute marginal probabilities and format for metrics.
-
-        Uses forward-backward algorithm to get P(y_t = k | x), which properly
-        incorporates learned Semi-Markov CRF transition and duration constraints.
+        Returns:
+            valid_preds: (batch_size, seq_len) int labels 0-3, a guaranteed-valid cardiac cycle
+            marginal_logits: (batch_size, num_tags, seq_len) posterior probabilities for AUROC
         """
         marginals = self.model.marginals(x)  # (batch_size, seq_len, num_tags)
-        # Permute to (batch_size, num_tags, seq_len) for torchmetrics
-        return marginals.permute(0, 2, 1)
+        log_posterior = torch.log(marginals.clamp_min(1e-9))
+        corrected = torch.as_tensor(validate_and_correct_predictions(log_posterior), device=x.device)
+        return corrected - 1, marginals.permute(0, 2, 1)
 
     def training_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> torch.Tensor:
         x, y = batch
@@ -167,13 +169,10 @@ class LitModelSemiCRF(pl.LightningModule):
         # Semi-Markov CRF loss
         loss = self.model.loss(x, y)
 
-        # Decode for accuracy/precision/recall/F1 metrics
-        decoded_logits = self._decode_to_logits(x)
+        # Guaranteed-valid decode for hard metrics; posterior marginals for AUROC (one fwd-bwd pass).
+        valid_preds, marginal_logits = self._valid_preds_and_marginals(x)
 
-        # Marginals for AUROC (forward-backward algorithm)
-        marginal_logits = self._marginals_to_logits(x)
-
-        metrics_per_class = self.test_metrics_per_class(decoded_logits, y)
+        metrics_per_class = self.test_metrics_per_class(valid_preds, y)
         self.test_metrics_per_class.reset()
 
         # Update AUROC with marginal probabilities
@@ -181,7 +180,7 @@ class LitModelSemiCRF(pl.LightningModule):
         self.test_auroc.update(marginal_logits, y)
 
         self.log("test_loss", loss)
-        self.log_dict(self.test_metrics(decoded_logits, y))
+        self.log_dict(self.test_metrics(valid_preds, y))
 
         for metric_name, metric_values in metrics_per_class.items():
             for i, v in enumerate(metric_values):
@@ -209,6 +208,7 @@ class LitModelSemiCRF(pl.LightningModule):
             print(f"  {name}: μ={dur_params['means'][i]:.1f}, σ={dur_params['stds'][i]:.1f} frames")
 
     def configure_optimizers(self) -> OptimizerLRScheduler:
-        optimizer = Adam(self.parameters(), lr=0.01)
+        # Use smaller LR to prevent emission scale explosion with long segment durations
+        optimizer = Adam(self.parameters(), lr=self.lr)
         scheduler = LambdaLR(optimizer, lr_lambda=lambda epoch: 0.9**epoch)
         return {"optimizer": optimizer, "lr_scheduler": scheduler}

@@ -1,9 +1,12 @@
 """Heart sound segmenter with Semi-Markov CRF for duration-aware sequence modeling."""
 
+from typing import Literal
+
 import torch
 from torch import nn
 
 from hss.model.semi_markov_crf import SemiMarkovCRF
+from hss.utils.sequence_validator import validate_and_correct_predictions
 
 
 class HeartSoundSegmenterSemiCRF(nn.Module):
@@ -24,6 +27,7 @@ class HeartSoundSegmenterSemiCRF(nn.Module):
         max_duration: Maximum segment duration in frames
         duration_means: Initial mean duration for each state (in frames)
         duration_stds: Initial std duration for each state (in frames)
+        forward_algorithm: Which forward algorithm to use ("sequential" or "parallel")
         device: Device to place the model on (CPU/GPU)
         dtype: Data type for model parameters
     """
@@ -38,6 +42,7 @@ class HeartSoundSegmenterSemiCRF(nn.Module):
         max_duration: int = 500,
         duration_means: list[float] | None = None,
         duration_stds: list[float] | None = None,
+        forward_algorithm: Literal["sequential", "parallel"] = "sequential",
         device: torch.device | None = None,
         dtype: torch.dtype = torch.float32,
     ) -> None:
@@ -84,6 +89,7 @@ class HeartSoundSegmenterSemiCRF(nn.Module):
             max_duration=max_duration,
             duration_means=duration_means,
             duration_stds=duration_stds,
+            forward_algorithm=forward_algorithm,
         )
 
     def _get_emissions(self, x: torch.Tensor) -> torch.Tensor:
@@ -143,6 +149,26 @@ class HeartSoundSegmenterSemiCRF(nn.Module):
         """
         emissions = self._get_emissions(x)
         return self.crf.decode(emissions)
+
+    def decode_valid(self, x: torch.Tensor) -> torch.Tensor:
+        """Decode a guaranteed-valid cardiac-cycle segmentation.
+
+        Runs a frame-level constrained Viterbi (self-loops plus the forward cycle
+        S1→Systole→S2→Diastole→S1 only) over the forward-backward posterior marginals. Unlike the
+        semi-Markov Viterbi (`decode`), which does joint-MAP segmentation and can emit orderings that
+        break the cycle, this maximises the per-frame posterior along a valid path — high per-frame
+        accuracy while guaranteeing every decoded sequence is a valid cardiac cycle.
+
+        Args:
+            x: Input tensor of shape (batch_size, sequence_length, input_size)
+
+        Returns:
+            Best valid tag sequences (batch_size, sequence_length), labels 0-3.
+        """
+        marginals = self.marginals(x)  # (batch_size, seq_len, num_tags)
+        log_posterior = torch.log(marginals.clamp_min(1e-9))
+        corrected = torch.as_tensor(validate_and_correct_predictions(log_posterior), device=x.device)
+        return corrected - 1  # constrained Viterbi output is 1-indexed; back to 0-indexed
 
     def decode_segments(self, x: torch.Tensor) -> list[list[tuple[int, int, int]]]:
         """Decode the best segmentation.
