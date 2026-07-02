@@ -2,6 +2,7 @@
 """Train heart sound segmentation model with Semi-Markov CRF (duration-aware)."""
 
 import argparse
+import gc
 
 import lightning.pytorch as pl
 import torch
@@ -28,6 +29,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=SEED, help="Random seed for the data split")
     parser.add_argument("--batch-size", type=int, default=50, help="Batch size")
     parser.add_argument("--max-epochs", type=int, default=15, help="Maximum training epochs")
+    parser.add_argument(
+        "--folds",
+        type=int,
+        default=1,
+        help="Number of cross-validation folds. 1 (default) does a single 70/15/15 split; "
+        "K>1 runs K-fold CV (test = held-out fold, val carved from the rest) and reports mean±std.",
+    )
     parser.add_argument("--patience", type=int, default=6, help="Early-stopping patience (epochs)")
     parser.add_argument("--lr", type=float, default=0.001, help="Adam learning rate")
     parser.add_argument("--max-duration", type=int, default=500, help="Maximum segment duration in frames")
@@ -204,6 +212,115 @@ def get_device(accelerator: str) -> tuple[torch.device, str]:
     return torch.device("cpu"), "cpu"
 
 
+def kfold_indices(n: int, k: int, seed: int) -> list[tuple[list[int], list[int], list[int]]]:
+    """Build (train, val, test) index splits for k-fold CV.
+
+    Test is the held-out fold; val is 15% of the remaining data (for early stopping); train is the
+    rest. The 15% carve keeps train non-empty for any k >= 2. Deterministic given the seed.
+    """
+    perm = torch.randperm(n, generator=torch.Generator().manual_seed(seed)).tolist()
+    folds = [perm[i::k] for i in range(k)]  # round-robin partition, disjoint and covering
+    splits = []
+    for i in range(k):
+        test_idx = folds[i]
+        rest = [idx for j, f in enumerate(folds) if j != i for idx in f]
+        val_size = int(0.15 * len(rest))
+        val_idx, train_idx = rest[:val_size], rest[val_size:]
+        splits.append((train_idx, val_idx, test_idx))
+    return splits
+
+
+def run_split(
+    features: torch.Tensor,
+    labels: torch.Tensor,
+    labels_full: torch.Tensor | None,
+    split: tuple[list[int], list[int], list[int]],
+    args: argparse.Namespace,
+    device: torch.device,
+    accelerator: str,
+    duration_means: list[float],
+    duration_stds: list[float],
+    max_duration: int,
+    log_dir: str,
+) -> tuple[dict[str, float], dict[str, torch.Tensor] | None]:
+    """Train and test one train/val/test split; return the test metrics (and matched-res metrics)."""
+    train_idx, val_idx, test_idx = split
+    dataset = TensorDataset(features, labels)
+
+    def loader(idx: list[int], shuffle: bool, drop_last: bool) -> DataLoader:
+        return DataLoader(
+            torch.utils.data.Subset(dataset, idx),
+            batch_size=args.batch_size,
+            shuffle=shuffle,
+            num_workers=args.num_workers,
+            drop_last=drop_last,
+            persistent_workers=False,
+        )
+
+    model = LitModelSemiCRF(
+        input_size=44,
+        batch_size=args.batch_size,
+        device=device,
+        max_duration=max_duration,
+        duration_means=duration_means,
+        duration_stds=duration_stds,
+        forward_algorithm=args.forward_algorithm,
+        lr=args.lr,
+    )
+    trainer = pl.Trainer(
+        max_epochs=args.max_epochs,
+        accelerator=accelerator,
+        gradient_clip_val=1,
+        gradient_clip_algorithm="norm",
+        callbacks=[EarlyStopping("val_loss", patience=args.patience, check_finite=True), RichProgressBar()],
+        default_root_dir=log_dir,
+    )
+    # Train batches drop the partial tail; val/test keep every sample (and val must be non-empty
+    # so EarlyStopping always has val_loss).
+    trainer.fit(model, loader(train_idx, True, drop_last=True), loader(val_idx, False, drop_last=False))
+    test_results = trainer.test(dataloaders=loader(test_idx, False, drop_last=False), ckpt_path="best")[0]
+
+    fullres = None
+    if labels_full is not None:
+        fullres = evaluate_fullres(
+            model.to(device), features[test_idx], labels_full[test_idx], args.downsample, args.batch_size, device
+        )
+
+    # Release the model/trainer so GPU memory doesn't accumulate across CV folds.
+    del model, trainer
+    gc.collect()
+    if device.type == "cuda":
+        torch.cuda.empty_cache()
+    return test_results, fullres
+
+
+def _print_metrics(test_results: dict[str, float], fullres: dict[str, torch.Tensor] | None, scale: int) -> None:
+    print("\n" + "=" * 60)
+    print(f"SEMI-MARKOV CRF MODEL TEST RESULTS (@ {1000 // scale} Hz)")
+    print("=" * 60)
+    for key, value in sorted(test_results.items()):
+        print(f"{key}: {value:.4f}")
+    if fullres is not None:
+        state_names = ["S1", "Systole", "S2", "Diastole"]
+        print("\nMATCHED-RESOLUTION TEST RESULTS (decoded, upsampled to 1000 Hz)")
+        for key in ("accuracy", "precision", "recall", "f1"):
+            print(f"fullres_{key}: {float(fullres[key]):.4f}")
+        for key in ("accuracy", "precision", "recall", "f1"):
+            per_class = ", ".join(f"{n}={v:.4f}" for n, v in zip(state_names, fullres[f"{key}_per_class"], strict=True))
+            print(f"fullres_{key}_per_class: {per_class}")
+
+
+def _print_cv_summary(all_results: list[dict[str, float]], k: int) -> None:
+    print("\n" + "=" * 60)
+    print(f"{k}-FOLD CV SUMMARY (mean ± std across folds)")
+    print("=" * 60)
+    keys = sorted(set().union(*(r.keys() for r in all_results)))
+    for key in keys:
+        vals = torch.tensor([r[key] for r in all_results if key in r])
+        std = vals.std(unbiased=True).item() if vals.numel() > 1 else 0.0
+        print(f"{key}: {vals.mean().item():.4f} ± {std:.4f}")
+
+
 def main(args: argparse.Namespace) -> None:
     device, accelerator = get_device(args.accelerator)
     print(f"Using device: {device} (accelerator: {accelerator})")
@@ -223,44 +340,7 @@ def main(args: argparse.Namespace) -> None:
         features, labels = downsample_time(features, labels, args.downsample)
         print(f"Downsampled x{args.downsample}: features {tuple(features.shape)}, labels {tuple(labels.shape)}")
 
-    dataset = TensorDataset(features, labels)
-
-    batch_size = args.batch_size
-
-    # Simple train/val/test split
-    test_size = int(0.15 * len(dataset))
-    val_size = int(0.15 * len(dataset))
-    train_size = len(dataset) - test_size - val_size
-
-    train_dataset, val_dataset, test_dataset = torch.utils.data.random_split(
-        dataset, [train_size, val_size, test_size], generator=torch.Generator().manual_seed(args.seed)
-    )
-
-    train_loader = DataLoader(
-        train_dataset,
-        batch_size=batch_size,
-        shuffle=True,
-        num_workers=args.num_workers,
-        drop_last=True,
-        persistent_workers=False,
-    )
-
-    val_loader = DataLoader(
-        val_dataset,
-        batch_size=batch_size,
-        shuffle=False,
-        num_workers=args.num_workers,
-        drop_last=True,
-        persistent_workers=False,
-    )
-
-    test_loader = DataLoader(
-        test_dataset,
-        batch_size=batch_size,
-        shuffle=False,
-        num_workers=args.num_workers,
-        drop_last=True,
-    )
+    n = len(features)
 
     # Duration priors and max_duration are specified in 1000 Hz frames; scale to the
     # working resolution so they stay physically meaningful after downsampling.
@@ -282,56 +362,36 @@ def main(args: argparse.Namespace) -> None:
         max_duration = covered
     print(f"Max duration: {max_duration} frames")
 
-    model = LitModelSemiCRF(
-        input_size=44,
-        batch_size=batch_size,
-        device=device,
-        max_duration=max_duration,
-        duration_means=duration_means,
-        duration_stds=duration_stds,
-        forward_algorithm=args.forward_algorithm,
-        lr=args.lr,
-    )
+    common = (features, labels, labels_full)
+    params = (duration_means, duration_stds, max_duration)
 
-    early_stopping = EarlyStopping("val_loss", patience=args.patience, check_finite=True)
-
-    trainer = pl.Trainer(
-        max_epochs=args.max_epochs,
-        accelerator=accelerator,
-        gradient_clip_val=1,
-        gradient_clip_algorithm="norm",
-        callbacks=[early_stopping, RichProgressBar()],
-        default_root_dir=args.log_dir,
-    )
-
-    # Train
-    trainer.fit(model, train_loader, val_loader)
-
-    # Test
-    test_results = trainer.test(dataloaders=test_loader, ckpt_path="best")[0]
-
-    print("\n" + "=" * 60)
-    print(f"SEMI-MARKOV CRF MODEL TEST RESULTS (@ {1000 // scale} Hz)")
-    print("=" * 60)
-    for key, value in sorted(test_results.items()):
-        print(f"{key}: {value:.4f}")
-
-    # Matched-resolution evaluation: score decoded predictions upsampled to the original resolution.
-    # trainer.test(ckpt_path="best") already restored the best weights into `model`.
-    if labels_full is not None:
-        test_idx = test_dataset.indices
-        fullres = evaluate_fullres(
-            model.to(device), features[test_idx], labels_full[test_idx], scale, batch_size, device
+    if args.folds <= 1:
+        # Single 70/15/15 split (test and val are each 15%).
+        test_size = int(0.15 * n)
+        val_size = int(0.15 * n)
+        subsets = torch.utils.data.random_split(
+            TensorDataset(features, labels),
+            [n - test_size - val_size, val_size, test_size],
+            generator=torch.Generator().manual_seed(args.seed),
         )
-        state_names = ["S1", "Systole", "S2", "Diastole"]
-        print("\n" + "=" * 60)
-        print("MATCHED-RESOLUTION TEST RESULTS (decoded, upsampled to 1000 Hz)")
-        print("=" * 60)
-        for key in ("accuracy", "precision", "recall", "f1"):
-            print(f"fullres_{key}: {fullres[key]:.4f}")
-        for key in ("accuracy", "precision", "recall", "f1"):
-            per_class = ", ".join(f"{n}={v:.4f}" for n, v in zip(state_names, fullres[f"{key}_per_class"], strict=True))
-            print(f"fullres_{key}_per_class: {per_class}")
+        split = (subsets[0].indices, subsets[1].indices, subsets[2].indices)
+        test_results, fullres = run_split(*common, split, args, device, accelerator, *params, args.log_dir)
+        _print_metrics(test_results, fullres, scale)
+        return
+
+    # K-fold cross-validation.
+    all_results: list[dict[str, float]] = []
+    for i, split in enumerate(kfold_indices(n, args.folds, args.seed)):
+        print("\n" + "#" * 60)
+        print(f"# FOLD {i + 1}/{args.folds}")
+        print("#" * 60)
+        test_results, fullres = run_split(
+            *common, split, args, device, accelerator, *params, f"{args.log_dir}/fold_{i}"
+        )
+        _print_metrics(test_results, fullres, scale)
+        all_results.append(test_results)
+
+    _print_cv_summary(all_results, args.folds)
 
 
 if __name__ == "__main__":
