@@ -15,7 +15,13 @@ from scripts.train_semi_crf import main, parse_args
 
 
 if __name__ == "__main__":
-    # With no arguments, default to the corrected 50 Hz 10-fold CV.
-    if len(sys.argv) == 1:
-        sys.argv += ["--downsample", "20", "--folds", "10", "--eval-fullres"]
+    # Apply the corrected 50 Hz 10-fold CV defaults for any flag the user didn't set explicitly,
+    # so e.g. `main.py --accelerator gpu` still runs the CV rather than falling back to a 1000 Hz split.
+    def _default(flag: str, *values: str) -> None:
+        if flag not in sys.argv:
+            sys.argv.extend([flag, *values])
+
+    _default("--downsample", "20")
+    _default("--folds", "10")
+    _default("--eval-fullres")
     main(parse_args())
