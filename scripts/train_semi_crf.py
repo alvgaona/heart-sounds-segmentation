@@ -37,7 +37,13 @@ def parse_args() -> argparse.Namespace:
         "K>1 runs K-fold CV (test = held-out fold, val carved from the rest) and reports mean±std.",
     )
     parser.add_argument("--patience", type=int, default=6, help="Early-stopping patience (epochs)")
-    parser.add_argument("--lr", type=float, default=0.001, help="Adam learning rate")
+    parser.add_argument(
+        "--lr",
+        type=float,
+        default=0.01,
+        help="Adam learning rate. 0.01 works well at 50 Hz (0.001 left the transition/duration "
+        "structure undertrained); lower it for full-resolution long-duration runs.",
+    )
     parser.add_argument("--max-duration", type=int, default=500, help="Maximum segment duration in frames")
     parser.add_argument(
         "--downsample",

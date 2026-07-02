@@ -39,7 +39,7 @@ class LitModelSemiCRF(pl.LightningModule):
         duration_means: list[float] | None = None,
         duration_stds: list[float] | None = None,
         forward_algorithm: Literal["sequential", "parallel"] = "sequential",
-        lr: float = 0.001,
+        lr: float = 0.01,
     ) -> None:
         super().__init__()
         self.save_hyperparameters(ignore=["device"])
@@ -208,7 +208,8 @@ class LitModelSemiCRF(pl.LightningModule):
             print(f"  {name}: μ={dur_params['means'][i]:.1f}, σ={dur_params['stds'][i]:.1f} frames")
 
     def configure_optimizers(self) -> OptimizerLRScheduler:
-        # Use smaller LR to prevent emission scale explosion with long segment durations
+        # lr defaults to 0.01: at 50 Hz this trains the transition/duration structure properly
+        # (0.001 undertrained it, F1 0.93 -> 0.95). Lower lr for full-resolution long-duration runs.
         optimizer = Adam(self.parameters(), lr=self.lr)
         scheduler = LambdaLR(optimizer, lr_lambda=lambda epoch: 0.9**epoch)
         return {"optimizer": optimizer, "lr_scheduler": scheduler}
