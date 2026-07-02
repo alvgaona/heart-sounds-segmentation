@@ -4,6 +4,7 @@ import torch
 from torch import nn
 
 from hss.model.crf import CRF
+from hss.utils.sequence_validator import validate_and_correct_predictions
 
 
 class HeartSoundSegmenterCRF(nn.Module):
@@ -178,3 +179,18 @@ class HeartSoundSegmenterCRF(nn.Module):
         """
         emissions = self._get_emissions(x)
         return self.crf.marginals(emissions)
+
+    def decode_valid(self, x: torch.Tensor) -> torch.Tensor:
+        """Decode a guaranteed-valid cardiac cycle via constrained-posterior decoding.
+
+        Runs a frame-level constrained Viterbi (self-loops plus S1→Systole→S2→Diastole→S1 only) over
+        the forward-backward posterior marginals — the same decoder the Semi-Markov CRF uses, so all
+        models can be compared under one decode method.
+
+        Returns:
+            Best valid tag sequences (batch_size, sequence_length), labels 0-3.
+        """
+        marginals = self.marginals(x)
+        log_posterior = torch.log(marginals.clamp_min(1e-9))
+        corrected = torch.as_tensor(validate_and_correct_predictions(log_posterior), device=x.device)
+        return corrected - 1

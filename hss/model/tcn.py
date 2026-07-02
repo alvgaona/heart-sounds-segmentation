@@ -13,6 +13,8 @@ References:
 import torch
 from torch import Tensor, nn
 
+from hss.utils.sequence_validator import validate_and_correct_predictions
+
 
 class CausalConv1d(nn.Module):
     """Causal 1D convolution with dilation.
@@ -277,6 +279,21 @@ class HeartSoundSegmenterTCN(nn.Module):
         emissions = self.forward(x)
         return self.crf.marginals(emissions)
 
+    def decode_valid(self, x: Tensor) -> Tensor:
+        """Decode a guaranteed-valid cardiac cycle via constrained-posterior decoding.
+
+        Constrained frame-level Viterbi (self-loops + S1→Systole→S2→Diastole→S1) over the CRF
+        forward-backward marginals — the same decoder the Semi-Markov CRF uses, for a fair
+        cross-model comparison.
+
+        Returns:
+            Best valid tag sequences (batch, seq_len), labels 0-3.
+        """
+        marginals = self.marginals(x)
+        log_posterior = torch.log(marginals.clamp_min(1e-9))
+        corrected = torch.as_tensor(validate_and_correct_predictions(log_posterior), device=x.device)
+        return corrected - 1
+
 
 class BiTCN(nn.Module):
     """Bidirectional Temporal Convolutional Network.
@@ -464,3 +481,18 @@ class HeartSoundSegmenterBiTCN(nn.Module):
         """
         emissions = self.forward(x)
         return self.crf.marginals(emissions)
+
+    def decode_valid(self, x: Tensor) -> Tensor:
+        """Decode a guaranteed-valid cardiac cycle via constrained-posterior decoding.
+
+        Constrained frame-level Viterbi (self-loops + S1→Systole→S2→Diastole→S1) over the CRF
+        forward-backward marginals — the same decoder the Semi-Markov CRF uses, for a fair
+        cross-model comparison.
+
+        Returns:
+            Best valid tag sequences (batch, seq_len), labels 0-3.
+        """
+        marginals = self.marginals(x)
+        log_posterior = torch.log(marginals.clamp_min(1e-9))
+        corrected = torch.as_tensor(validate_and_correct_predictions(log_posterior), device=x.device)
+        return corrected - 1
