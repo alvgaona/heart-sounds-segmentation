@@ -2,7 +2,14 @@
 
 import numpy as np
 
-from hss.transforms.envelope import envelope_features, hilbert_envelope, homomorphic_envelope
+from hss.transforms.envelope import (
+    envelope_features,
+    hilbert_envelope,
+    homomorphic_envelope,
+    psd_envelope,
+    springer_features,
+    wavelet_envelope,
+)
 
 
 FS = 1000
@@ -46,3 +53,23 @@ def test_envelope_features_accepts_2d_column() -> None:
     x = _burst_signal().reshape(-1, 1)
     feats = envelope_features(x, FS)
     assert feats.shape == (FS, 2)
+
+
+def test_wavelet_envelope_shape_and_finite() -> None:
+    env = wavelet_envelope(_burst_signal(), FS)
+    assert env.shape == (FS,)
+    assert np.isfinite(env).all()
+
+
+def test_psd_envelope_shape_and_finite() -> None:
+    env = psd_envelope(_burst_signal(), FS)
+    assert env.shape == (FS,)
+    assert np.isfinite(env).all()
+
+
+def test_springer_features_shape_and_norm() -> None:
+    feats = springer_features(_burst_signal(), FS)
+    assert feats.shape == (FS, 4)
+    assert np.isfinite(feats).all()
+    assert np.allclose(feats.mean(axis=0), 0.0, atol=1e-4)
+    assert np.allclose(feats.std(axis=0), 1.0, atol=1e-2)
