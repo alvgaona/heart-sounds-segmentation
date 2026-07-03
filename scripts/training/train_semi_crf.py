@@ -264,7 +264,7 @@ def run_split(
         )
 
     model = LitModelSemiCRF(
-        input_size=44,
+        input_size=features.shape[-1],
         batch_size=args.batch_size,
         device=device,
         max_duration=max_duration,
