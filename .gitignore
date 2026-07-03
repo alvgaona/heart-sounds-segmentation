@@ -5,6 +5,8 @@ resources/
 
 # Lightning AI
 lightning_logs/
+lightning_logs_*/
+checkpoints/
 
 # Pixi
 .pixi/
