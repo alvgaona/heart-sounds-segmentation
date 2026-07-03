@@ -65,8 +65,11 @@ def load_segmenter(model_type: str, ckpt: str, device: torch.device, batch_size:
     if model_type == "crf":
         from hss.model.lit_model_crf import LitModelCRF
 
+        # Infer input_size from the checkpoint (44 for FSST-only, 46 with envelope fusion) so both load.
+        state = torch.load(ckpt, map_location="cpu", weights_only=False)["state_dict"]
+        input_size = state["model.lstm_1.weight_ih_l0"].shape[1]
         lit = LitModelCRF.load_from_checkpoint(
-            ckpt, input_size=44, batch_size=batch_size, device=device, map_location=device
+            ckpt, input_size=input_size, batch_size=batch_size, device=device, map_location=device
         )
     elif model_type == "tcn":
         from hss.model.lit_model_tcn import LitModelTCN

@@ -165,7 +165,7 @@ def run_split(
         )
 
     model = LitModelCRF(
-        input_size=44,
+        input_size=features.shape[-1],
         batch_size=args.batch_size,
         device=device,
         lr=args.lr,
