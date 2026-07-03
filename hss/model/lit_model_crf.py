@@ -10,6 +10,7 @@ from torch.optim.lr_scheduler import LambdaLR
 from torchmetrics import MetricCollection
 from torchmetrics.classification import AUROC, Accuracy, F1Score, Precision, Recall
 
+from hss.model.boundary_loss import BoundaryLossConfig, boundary_weighted_ce
 from hss.model.segmenter_crf import HeartSoundSegmenterCRF
 
 
@@ -21,6 +22,8 @@ class LitModelCRF(pl.LightningModule):
         input_size: int,
         batch_size: int,
         device: torch.device,
+        lr: float = 0.01,
+        boundary_cfg: BoundaryLossConfig | None = None,
     ) -> None:
         super().__init__()
         self.model = HeartSoundSegmenterCRF(
@@ -29,6 +32,8 @@ class LitModelCRF(pl.LightningModule):
             device=device,
         )
         self.batch_size = batch_size
+        self.lr = lr
+        self.boundary_cfg = boundary_cfg or BoundaryLossConfig()
         num_classes = 4
 
         self.train_metrics_per_class = MetricCollection(
@@ -85,9 +90,23 @@ class LitModelCRF(pl.LightningModule):
         # Permute to (batch_size, num_tags, seq_len) for torchmetrics
         return marginals.permute(0, 2, 1)
 
+    def _compute_loss(self, x: torch.Tensor, y: torch.Tensor) -> Tuple[torch.Tensor, dict[str, torch.Tensor]]:
+        """Return (total loss, extras). Without the boundary aux this is the plain CRF NLL.
+
+        With it, total = crf_nll + aux_lambda * boundary_weighted_ce, and emissions are computed once
+        for both terms (avoids a second LSTM pass). Extras hold the detached nll/aux for logging.
+        """
+        if not self.boundary_cfg.enabled:
+            return self.model.loss(x, y), {}
+        emissions = self.model(x)
+        nll = self.model.crf(emissions, y)
+        aux = boundary_weighted_ce(emissions, y, self.boundary_cfg)
+        total = nll + self.boundary_cfg.aux_lambda * aux
+        return total, {"nll": nll.detach(), "aux": aux.detach()}
+
     def training_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> torch.Tensor:
         x, y = batch
-        loss = self.model.loss(x, y)
+        loss, extras = self._compute_loss(x, y)
 
         # Decode for metrics
         logits = self._decode_to_logits(x)
@@ -96,6 +115,8 @@ class LitModelCRF(pl.LightningModule):
         self.train_metrics_per_class.reset()
 
         self.log("train_loss", loss, prog_bar=True, on_step=True, on_epoch=True)
+        for name, value in extras.items():
+            self.log(f"train_{name}", value, on_step=True, on_epoch=True)
         self.log_dict(self.train_metrics(logits, y), prog_bar=True, on_step=True, on_epoch=True)
 
         for metric_name, metric_values in metrics_per_class.items():
@@ -111,8 +132,8 @@ class LitModelCRF(pl.LightningModule):
     def validation_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> torch.Tensor:
         x, y = batch
 
-        # CRF loss
-        loss = self.model.loss(x, y)
+        # CRF loss (plus boundary aux when enabled)
+        loss, extras = self._compute_loss(x, y)
 
         # Decode for metrics
         logits = self._decode_to_logits(x)
@@ -121,6 +142,8 @@ class LitModelCRF(pl.LightningModule):
         self.val_metrics_per_class.reset()
 
         self.log("val_loss", loss, prog_bar=True, on_step=True, on_epoch=True)
+        for name, value in extras.items():
+            self.log(f"val_{name}", value, on_step=False, on_epoch=True)
         self.log_dict(self.val_metrics(logits, y), prog_bar=True, on_step=False, on_epoch=True)
 
         for metric_name, metric_values in metrics_per_class.items():
@@ -136,8 +159,8 @@ class LitModelCRF(pl.LightningModule):
     def test_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> torch.Tensor:
         x, y = batch
 
-        # CRF loss
-        loss = self.model.loss(x, y)
+        # CRF loss (plus boundary aux when enabled)
+        loss, _ = self._compute_loss(x, y)
 
         # Decode for accuracy/precision/recall/F1 metrics
         decoded_logits = self._decode_to_logits(x)
@@ -177,6 +200,6 @@ class LitModelCRF(pl.LightningModule):
         self.test_auroc.reset()
 
     def configure_optimizers(self) -> OptimizerLRScheduler:
-        optimizer = Adam(self.parameters(), lr=0.01)
+        optimizer = Adam(self.parameters(), lr=self.lr)
         scheduler = LambdaLR(optimizer, lr_lambda=lambda epoch: 0.9**epoch)
         return {"optimizer": optimizer, "lr_scheduler": scheduler}

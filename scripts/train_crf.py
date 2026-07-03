@@ -10,6 +10,7 @@ import torch.utils.data
 from lightning.pytorch.callbacks import EarlyStopping, RichProgressBar
 from torch.utils.data import DataLoader, TensorDataset
 
+from hss.model.boundary_loss import BoundaryLossConfig
 from hss.model.lit_model_crf import LitModelCRF
 
 
@@ -50,7 +51,42 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--num-workers", type=int, default=2, help="DataLoader worker processes per split")
     parser.add_argument("--log-dir", default="lightning_logs_crf", help="Trainer default_root_dir for logs/checkpoints")
+    parser.add_argument("--lr", type=float, default=0.01, help="Adam learning rate")
+    parser.add_argument(
+        "--boundary-loss",
+        action="store_true",
+        help="Add the S1-focused boundary-aware auxiliary loss (weighted per-frame CE on emissions) "
+        "to the CRF NLL. Targets missed/spurious S1 detections. Use a separate --log-dir to avoid "
+        "overwriting the baseline checkpoints.",
+    )
+    parser.add_argument(
+        "--aux-lambda",
+        type=float,
+        default=5.0,
+        help="Weight of the aux CE relative to the CRF NLL. The CRF NLL is a per-sequence sum (~9) while the "
+        "aux is a per-frame weighted mean (~0.43), so lambda~5 makes the aux ~25%% of the loss (calibrated on "
+        "a trained baseline); lambda<1 is effectively inert.",
+    )
+    parser.add_argument(
+        "--boundary-weight", type=float, default=2.0, help="Loss multiplier for frames near a GT transition"
+    )
+    parser.add_argument(
+        "--boundary-window", type=int, default=2, help="Half-width (frames) of the boundary emphasis region"
+    )
+    parser.add_argument("--s1-weight", type=float, default=2.0, help="Class weight for S1 (class 0) in the aux CE")
     return parser.parse_args()
+
+
+def build_boundary_cfg(args: argparse.Namespace) -> BoundaryLossConfig:
+    """Construct the boundary-loss config from CLI args (disabled unless --boundary-loss)."""
+    if not args.boundary_loss:
+        return BoundaryLossConfig(aux_lambda=0.0)
+    return BoundaryLossConfig(
+        aux_lambda=args.aux_lambda,
+        boundary_weight=args.boundary_weight,
+        boundary_window=args.boundary_window,
+        class_weights=(args.s1_weight, 1.0, 1.0, 1.0),
+    )
 
 
 def downsample_time(features: torch.Tensor, labels: torch.Tensor, factor: int) -> tuple[torch.Tensor, torch.Tensor]:
@@ -128,7 +164,13 @@ def run_split(
             persistent_workers=False,
         )
 
-    model = LitModelCRF(input_size=44, batch_size=args.batch_size, device=device)
+    model = LitModelCRF(
+        input_size=44,
+        batch_size=args.batch_size,
+        device=device,
+        lr=args.lr,
+        boundary_cfg=build_boundary_cfg(args),
+    )
     trainer = pl.Trainer(
         max_epochs=args.max_epochs,
         accelerator=accelerator,
@@ -164,6 +206,11 @@ def main(args: argparse.Namespace) -> None:
     device, accelerator = get_device(args.accelerator)
     print(f"Using device: {device} (accelerator: {accelerator})")
     print("Training with (Bi)LSTM + CRF model")
+    if args.boundary_loss:
+        print(
+            f"Boundary-aware aux loss ON: lambda={args.aux_lambda}, boundary_weight={args.boundary_weight}, "
+            f"window={args.boundary_window}, s1_weight={args.s1_weight}"
+        )
 
     print(f"Loading precomputed features from {args.fsst_path}...")
     data = torch.load(args.fsst_path, weights_only=True, mmap=args.downsample > 1)
