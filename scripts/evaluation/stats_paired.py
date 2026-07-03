@@ -29,6 +29,12 @@ METRICS = ["macro_f1", "s1_f1", "s1_onset40", "s2_onset40"]
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model", choices=["crf", "tcn", "semi_crf"], default="crf")
+    parser.add_argument(
+        "--model-a", choices=["crf", "tcn", "semi_crf"], default=None, help="Run A model (default --model)"
+    )
+    parser.add_argument(
+        "--model-b", choices=["crf", "tcn", "semi_crf"], default=None, help="Run B model (default --model)"
+    )
     parser.add_argument("--log-dir-a", required=True, help="Run A (baseline) fold checkpoint root")
     parser.add_argument("--fsst-path-a", default="data/springer_fsst/springer_fsst.pt")
     parser.add_argument("--downsample-a", type=int, default=20, help="Avg-pool factor for run A features")
@@ -116,11 +122,13 @@ def paired(a: list[float | None], b: list[float | None]) -> tuple[list[float], l
 def main(args: argparse.Namespace) -> None:
     device = get_device(args.accelerator)
     ref_labels = torch.load(args.ref_labels_path, weights_only=True)["labels"]  # 1000 Hz onset reference
+    model_a = args.model_a or args.model
+    model_b = args.model_b or args.model
     print(f"Onset reference labels: {args.ref_labels_path} {tuple(ref_labels.shape)}")
-    print(f"Run A ({args.label_a}): {args.log_dir_a}  <- {args.fsst_path_a} (x{args.downsample_a})")
-    ra = per_fold_metrics(args.model, args.log_dir_a, args.fsst_path_a, args.downsample_a, ref_labels, args, device)
-    print(f"Run B ({args.label_b}): {args.log_dir_b}  <- {args.fsst_path_b} (x{args.downsample_b})")
-    rb = per_fold_metrics(args.model, args.log_dir_b, args.fsst_path_b, args.downsample_b, ref_labels, args, device)
+    print(f"Run A ({args.label_a}, {model_a}): {args.log_dir_a}  <- {args.fsst_path_a} (x{args.downsample_a})")
+    ra = per_fold_metrics(model_a, args.log_dir_a, args.fsst_path_a, args.downsample_a, ref_labels, args, device)
+    print(f"Run B ({args.label_b}, {model_b}): {args.log_dir_b}  <- {args.fsst_path_b} (x{args.downsample_b})")
+    rb = per_fold_metrics(model_b, args.log_dir_b, args.fsst_path_b, args.downsample_b, ref_labels, args, device)
 
     print("\n" + "=" * 78)
     print(f"Paired {args.label_b} - {args.label_a}  (delta > 0 favors {args.label_b}; n paired folds)")
