@@ -38,7 +38,11 @@ class LitModel(pl.LightningModule):
 
         self.val_metrics_per_class = self.train_metrics_per_class.clone(prefix="val_")
         self.test_metrics_per_class = self.train_metrics_per_class.clone(prefix="test_")
-        self.test_metrics_per_class.add_metrics(AUROC(task="multiclass", average=None, num_classes=num_classes))
+
+        # AUROC computed on CPU: torchmetrics' MulticlassAUROC can return garbage on Apple MPS
+        # (0.0 / huge values) vs a correct value on CPU. Kept separate from the on-device collections.
+        self.test_auroc_per_class = AUROC(task="multiclass", average=None, num_classes=num_classes)
+        self.test_auroc = AUROC(task="multiclass", average="macro", num_classes=num_classes)
 
         self.train_metrics = MetricCollection(
             {
@@ -52,7 +56,6 @@ class LitModel(pl.LightningModule):
 
         self.val_metrics = self.train_metrics.clone(prefix="val_")
         self.test_metrics = self.train_metrics.clone(prefix="test_")
-        self.test_metrics.add_metrics(AUROC(task="multiclass", average="macro", num_classes=num_classes))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.model(x)
@@ -107,6 +110,12 @@ class LitModel(pl.LightningModule):
         metrics_per_class = self.test_metrics_per_class(logits, y)
         self.test_metrics_per_class.reset()
 
+        # AUROC on CPU (see note in __init__).
+        logits_cpu = logits.detach().cpu()
+        y_cpu = y.cpu()
+        self.test_auroc_per_class.update(logits_cpu, y_cpu)
+        self.test_auroc.update(logits_cpu, y_cpu)
+
         self.log("test_loss", loss)
         self.log_dict(self.test_metrics(logits, y))
 
@@ -117,8 +126,16 @@ class LitModel(pl.LightningModule):
         return loss
 
     def on_test_epoch_end(self) -> None:
+        # Log AUROC computed from CPU tensors (see note in __init__).
+        auroc_per_class = self.test_auroc_per_class.compute()
+        for i, v in enumerate(auroc_per_class):
+            self.log(f"test_AUROC_{i}", v)
+        self.log("test_AUROC", self.test_auroc.compute())
+
         self.test_metrics_per_class.reset()
         self.test_metrics.reset()
+        self.test_auroc_per_class.reset()
+        self.test_auroc.reset()
 
     def configure_optimizers(self) -> OptimizerLRScheduler:
         optimizer = Adam(self.parameters(), lr=0.01)

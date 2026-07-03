@@ -75,7 +75,11 @@ class HeartSoundSegmenter(nn.Module):
             Log softmax probabilities for each class at each time step,
             shape (batch_size, sequence_length, 4)
         """
-        output, (hn, cn) = self.lstm_1(x, (self.h0, self.c0))
+        # Slice h0/c0 to the actual batch size so partial batches (last CV/test batch) work, and
+        # .contiguous() because a sliced view is non-contiguous, which the CUDA LSTM kernel rejects.
+        h0 = self.h0[:, : x.shape[0], :].contiguous()
+        c0 = self.c0[:, : x.shape[0], :].contiguous()
+        output, (hn, cn) = self.lstm_1(x, (h0, c0))
         output = self.relu(output)
         output = self.dropout(output)
         output, _ = self.lstm_2(output, (hn, cn))
