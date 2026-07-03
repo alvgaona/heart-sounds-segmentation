@@ -33,6 +33,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--model", choices=["crf", "tcn", "semi_crf"], required=True)
     parser.add_argument("--log-dir", default=None)
     parser.add_argument("--fsst-path", default="data/springer_fsst/springer_fsst.pt")
+    parser.add_argument(
+        "--ref-labels-path",
+        default="data/springer_fsst/springer_fsst.pt",
+        help="1000 Hz labels source for onset matching (shared across configs; pre-pooled feature .pt files "
+        "drop the 1000 Hz labels, so onset F1 references this full-res set instead).",
+    )
     parser.add_argument("--downsample", type=int, default=20)
     parser.add_argument("--folds", type=int, default=10)
     parser.add_argument("--seed", type=int, default=68)
@@ -80,8 +86,10 @@ def main(args: argparse.Namespace) -> None:
     print(f"Model: {args.model} | log-dir: {log_dir} | device: {device} | rate: {1000 // factor} Hz")
 
     data = torch.load(args.fsst_path, weights_only=True, mmap=factor > 1)
-    labels_full = data["labels"]
-    features, labels_ds = downsample_time(data["features"], labels_full, factor)
+    features, labels_ds = downsample_time(data["features"], data["labels"], factor)
+    ref_labels = torch.load(args.ref_labels_path, weights_only=True)["labels"]  # 1000 Hz onset reference
+    onset_factor = ref_labels.shape[1] // features.shape[1]  # working rate -> 1000 Hz
+    ref_len = onset_factor * features.shape[1]
     splits = kfold_indices(len(features), args.folds, args.seed)
 
     boundary: dict[tuple[str, int], list[float]] = {(s, t): [] for s in SOUNDS for t in TOLERANCES_MS}
@@ -99,15 +107,14 @@ def main(args: argparse.Namespace) -> None:
             continue
         _, _, test_idx = splits[i]
         fx = features[test_idx]
-        t2 = (labels_full.shape[1] // factor) * factor
-        ref_full = labels_full[test_idx][:, :t2]  # 1000 Hz reference
+        ref_full = ref_labels[test_idx][:, :ref_len]  # 1000 Hz reference
 
         preds = []
         with torch.no_grad():
             for b in range(0, len(fx), args.batch_size):
                 preds.append(net.decode_valid(fx[b : b + args.batch_size].to(device)).cpu())
         pred_ds = torch.cat(preds)  # (n, T) at working rate
-        pred_full = pred_ds.repeat_interleave(factor, dim=1)  # upsample to 1000 Hz for boundary match
+        pred_full = pred_ds.repeat_interleave(onset_factor, dim=1)  # upsample to 1000 Hz for boundary match
 
         # boundary F1 (1000 Hz; tolerance in ms == samples)
         for name, state in SOUNDS.items():
