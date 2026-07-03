@@ -2,7 +2,7 @@
 """Train heart sound segmentation model with (Bi)LSTM + CrossEntropy.
 
 The original model in this repo: a 2-layer bidirectional LSTM with a per-frame CrossEntropy loss
-(no CRF). Mirrors scripts/train_crf.py — argparse CLI, optional temporal downsampling, and k-fold CV
+(no CRF). Mirrors scripts/training/train_crf.py — argparse CLI, optional temporal downsampling, and k-fold CV
 on precomputed FSST features — so the plain LSTM is comparable to the CRF variants under one protocol.
 """
 
