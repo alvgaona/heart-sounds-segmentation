@@ -45,17 +45,16 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def drop_masked_onsets(onsets_per_row: list[list[int]], ref_hr: torch.Tensor) -> list[list[int]]:
-    """Drop predicted onsets that fall in an unannotated (-1) span of the reference."""
-    return [[o for o in row if ref_hr[n, o].item() != -1] for n, row in enumerate(onsets_per_row)]
+def drop_masked_onsets(
+    onsets_per_row: list[list[int]], neg_mask: torch.Tensor, has_neg: torch.Tensor
+) -> list[list[int]]:
+    """Drop predicted onsets that fall in an unannotated (-1) reference span (skip rows with no -1)."""
+    return [row if not has_neg[n] else [o for o in row if not neg_mask[n, o]] for n, row in enumerate(onsets_per_row)]
 
 
-def onset_f1_grouped(p_on: list[list[int]], r_on: list[list[int]], groups: torch.Tensor, tol: int) -> float:
-    """Mean over groups (recordings or patients) of per-group boundary F1."""
-    vals = []
-    for g in torch.unique(groups).tolist():
-        idx = (groups == g).nonzero().flatten().tolist()
-        vals.append(boundary_f1([p_on[i] for i in idx], [r_on[i] for i in idx], tol))
+def onset_f1_grouped(p_on: list[list[int]], r_on: list[list[int]], group_idx: list[list[int]], tol: int) -> float:
+    """Mean over groups (precomputed row-index lists) of per-group boundary F1."""
+    vals = [boundary_f1([p_on[i] for i in idx], [r_on[i] for i in idx], tol) for idx in group_idx]
     return float(torch.tensor(vals).mean())
 
 
@@ -71,6 +70,12 @@ def main(args: argparse.Namespace) -> None:
     print(f"CirCor: {len(feats)} frames, {len(torch.unique(pat))} patients, rate {feats.shape[1] // 2} Hz (2 s window)")
 
     acc: dict[str, list[float]] = defaultdict(list)
+
+    # Fold-invariant precompute: reference onsets, -1 mask, and per-patient row indices.
+    neg_mask = labs_hr == -1
+    has_neg = neg_mask.any(dim=1)
+    ref_onsets = {state: onset_lists(labs_hr, state) for state in SOUNDS.values()}
+    group_idx = [(pat == g).nonzero().flatten().tolist() for g in torch.unique(pat).tolist()]
 
     for i in range(args.folds):
         ckpt = latest_ckpt(log_dir, i)
@@ -94,11 +99,11 @@ def main(args: argparse.Namespace) -> None:
         acc["valid_cycle"].append(valid_cycle_fraction(pred))
 
         for name, state in SOUNDS.items():
-            p_on = drop_masked_onsets(onset_lists(pred_hr, state), labs_hr)
-            r_on = onset_lists(labs_hr, state)
+            p_on = drop_masked_onsets(onset_lists(pred_hr, state), neg_mask, has_neg)
+            r_on = ref_onsets[state]
             for tol in TOLERANCES_MS:
                 acc[f"{name}_on{tol}"].append(boundary_f1(p_on, r_on, tol))
-                acc[f"{name}_on{tol}_pp"].append(onset_f1_grouped(p_on, r_on, pat, tol))
+                acc[f"{name}_on{tol}_pp"].append(onset_f1_grouped(p_on, r_on, group_idx, tol))
         print(f"fold {i + 1}: done")
         del net
 
