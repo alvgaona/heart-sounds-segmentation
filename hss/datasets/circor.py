@@ -1,14 +1,26 @@
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
+import scipy.signal
 import torch
 import torchvision.transforms
 from huggingface_hub import snapshot_download
 from rich.progress import track
 from torch.utils.data import Dataset
 
-from hss.transforms import Resample
 from hss.utils.preprocess import frame_signal
+
+
+def _resample_signal(x: torch.Tensor, target_len: int) -> torch.Tensor:
+    return torch.tensor(scipy.signal.resample(x.numpy(), target_len), dtype=x.dtype)
+
+
+def _resample_labels_nn(y: torch.Tensor, target_len: int) -> torch.Tensor:
+    """Nearest-neighbour label resample — never interpolates across state boundaries or the -1 sentinel."""
+    src = y.numpy()
+    idx = np.minimum((np.arange(target_len) * len(src) / target_len).round().astype(int), len(src) - 1)
+    return torch.tensor(src[idx], dtype=torch.int64)
 
 
 def collate_fn(batch):
@@ -31,8 +43,13 @@ def collate_fn(batch):
 class CirCorDataset(Dataset):
     """CirCor DigiScope Phonocardiogram Dataset (PhysioNet Challenge 2022).
 
-    Loads heart sound recordings with per-sample segmentation labels from parquet files.
-    Labels: 1=S1, 2=Systole, 3=S2, 4=Diastole (matching original CirCor format).
+    Parquets are the official .wav cropped to the annotated span (interior unannotated regions kept, leading/
+    trailing dropped) at 4000 Hz, with per-sample labels 1=S1, 2=Systole, 3=S2, 4=Diastole and -1 = unannotated.
+
+    This loader resamples each recording to ``target_fs`` (default 1000 Hz, matching the Springer pipeline) and
+    maps labels to the model's 0-indexed space: 1-4 -> 0-3, with -1 preserved as the ignore label. Signals are
+    Fourier-resampled; labels are nearest-neighbour resampled so state boundaries and the -1 sentinel are never
+    interpolated across.
     """
 
     REPO_ID = "alvgaona/heart-sounds"
@@ -50,11 +67,15 @@ class CirCorDataset(Dataset):
         transform: torchvision.transforms.Compose | None = None,
         dtype: torch.dtype = torch.float32,
         verbose: bool = True,
+        orig_fs: int = 4000,
+        target_fs: int = 1000,
     ) -> None:
         self.root = Path(root)
         self.transform = transform
         self.dtype = dtype
         self.in_memory = in_memory
+        self.orig_fs = orig_fs
+        self.target_fs = target_fs
         self.data: list[tuple[torch.Tensor, torch.Tensor]] = []
 
         dataset_path = self.root / self.FOLDER_NAME
@@ -63,9 +84,7 @@ class CirCorDataset(Dataset):
             self._download()
 
         # Get sorted list of parquet files (exclude metadata.parquet)
-        self.recordings = sorted(
-            p for p in dataset_path.glob("*.parquet") if p.name != "metadata.parquet"
-        )
+        self.recordings = sorted(p for p in dataset_path.glob("*.parquet") if p.name != "metadata.parquet")
         if count is not None:
             self.recordings = self.recordings[:count]
 
@@ -108,19 +127,23 @@ class CirCorDataset(Dataset):
         )
 
     def _load_recording(self, path: Path) -> tuple[torch.Tensor, torch.Tensor]:
-        """Load a parquet file and return signals and labels."""
+        """Load a parquet, resample to target_fs, and map labels to 0-3 with -1 preserved."""
         df = pd.read_parquet(path)
         x = torch.tensor(df["signals"].to_numpy(), dtype=self.dtype)
         y = torch.tensor(df["labels"].to_numpy(), dtype=torch.int64)
+
+        if self.target_fs != self.orig_fs:
+            target_len = round(len(x) * self.target_fs / self.orig_fs)
+            x = _resample_signal(x, target_len)
+            y = _resample_labels_nn(y, target_len)
+
+        # CirCor labels 1-4 -> model space 0-3; -1 (unannotated) stays -1 as the ignore label.
+        y = torch.where(y > 0, y - 1, y)
         return x, y
 
     def _apply_transform(self, x: torch.Tensor, y: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         if self.transform is not None:
             x = self.transform(x)
-            for t in self.transform.transforms:
-                if isinstance(t, Resample):
-                    y = torch.round(t(y.float())).to(torch.int64)
-                    break
 
         if len(x.shape) == 1:
             x = x.unsqueeze(1)
