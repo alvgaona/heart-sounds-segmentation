@@ -12,28 +12,31 @@ import argparse
 
 import torch
 from reeval_decoders import (
+    add_split_args,
+    build_test_splits,
+    decode_preds,
     downsample_time,
     get_device,
-    kfold_indices,
     latest_ckpt,
     load_segmenter,
+    valid_cycle_fraction,
 )
 from reeval_springer_metrics import boundary_f1, onset_lists
 from scipy import stats
 from torchmetrics.classification import F1Score
 
 
-METRICS = ["macro_f1", "s1_f1", "s1_onset40", "s2_onset40"]
+METRICS = ["macro_f1", "s1_f1", "s1_onset40", "s2_onset40", "valid_cycle"]
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--model", choices=["crf", "tcn", "semi_crf"], default="crf")
+    parser.add_argument("--model", choices=["crf", "lstm", "tcn", "semi_crf"], default="crf")
     parser.add_argument(
-        "--model-a", choices=["crf", "tcn", "semi_crf"], default=None, help="Run A model (default --model)"
+        "--model-a", choices=["crf", "lstm", "tcn", "semi_crf"], default=None, help="Run A model (default --model)"
     )
     parser.add_argument(
-        "--model-b", choices=["crf", "tcn", "semi_crf"], default=None, help="Run B model (default --model)"
+        "--model-b", choices=["crf", "lstm", "tcn", "semi_crf"], default=None, help="Run B model (default --model)"
     )
     parser.add_argument("--log-dir-a", required=True, help="Run A (baseline) fold checkpoint root")
     parser.add_argument("--fsst-path-a", default="data/springer_fsst/springer_fsst.pt")
@@ -53,6 +56,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=68)
     parser.add_argument("--batch-size", type=int, default=50)
     parser.add_argument("--accelerator", choices=["auto", "cpu", "gpu", "mps"], default="cpu")
+    add_split_args(parser)
     return parser.parse_args()
 
 
@@ -73,7 +77,7 @@ def per_fold_metrics(
     """
     data = torch.load(fsst_path, weights_only=True, mmap=factor > 1)
     features, labels_ds = downsample_time(data["features"], data["labels"], factor)
-    splits = kfold_indices(len(features), args.folds, args.seed)
+    splits = build_test_splits(len(features), args)
     onset_factor = ref_labels.shape[1] // features.shape[1]  # working rate -> 1000 Hz
     ref_len = onset_factor * features.shape[1]
     macro_f1 = F1Score(task="multiclass", num_classes=4, average="macro")
@@ -95,7 +99,7 @@ def per_fold_metrics(
         preds = []
         with torch.no_grad():
             for b in range(0, len(fx), args.batch_size):
-                preds.append(net.decode_valid(fx[b : b + args.batch_size].to(device)).cpu())
+                preds.append(decode_preds(net, fx[b : b + args.batch_size].to(device), model).cpu())
         pred_ds = torch.cat(preds)
         pred_full = pred_ds.repeat_interleave(onset_factor, dim=1)
         y_ds = labels_ds[test_idx]
@@ -104,6 +108,7 @@ def per_fold_metrics(
         out["s1_f1"].append(per_class_f1(pred_ds.reshape(-1), y_ds.reshape(-1))[0].item())
         out["s1_onset40"].append(boundary_f1(onset_lists(pred_full, 0), onset_lists(ref_full, 0), 40))
         out["s2_onset40"].append(boundary_f1(onset_lists(pred_full, 2), onset_lists(ref_full, 2), 40))
+        out["valid_cycle"].append(valid_cycle_fraction(pred_ds))
         print(f"  fold {i + 1}: done")
         del net
     return out

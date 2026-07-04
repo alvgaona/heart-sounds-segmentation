@@ -17,7 +17,12 @@ import torch
 from torchmetrics.classification import F1Score
 
 
-DEFAULT_LOG_DIR = {"crf": "lightning_logs_crf", "tcn": "lightning_logs_tcn", "semi_crf": "lightning_logs_semi_crf"}
+DEFAULT_LOG_DIR = {
+    "crf": "lightning_logs_crf",
+    "lstm": "lightning_logs_lstm",
+    "tcn": "lightning_logs_tcn",
+    "semi_crf": "lightning_logs_semi_crf",
+}
 DECODERS = ["viterbi", "marginal", "posterior"]
 
 
@@ -54,6 +59,44 @@ def kfold_indices(n: int, k: int, seed: int) -> list[tuple[list[int], list[int],
     return splits
 
 
+def grouped_kfold_indices(group_ids: torch.Tensor, k: int, seed: int) -> list[tuple[list[int], list[int], list[int]]]:
+    """Group-level (recording/patient) k-fold; matches the training splits so held-out frames align."""
+    groups = torch.unique(group_ids).tolist()
+    frames_by_group: dict[int, list[int]] = {g: [] for g in groups}
+    for frame_idx, g in enumerate(group_ids.tolist()):
+        frames_by_group[g].append(frame_idx)
+    perm = [groups[i] for i in torch.randperm(len(groups), generator=torch.Generator().manual_seed(seed)).tolist()]
+    folds = [perm[i::k] for i in range(k)]
+
+    def to_frames(gs: list[int]) -> list[int]:
+        return [fi for g in gs for fi in frames_by_group[g]]
+
+    splits = []
+    for i in range(k):
+        rest = [g for j, f in enumerate(folds) if j != i for g in f]
+        vs = int(0.15 * len(rest))
+        splits.append((to_frames(rest[vs:]), to_frames(rest[:vs]), to_frames(folds[i])))
+    return splits
+
+
+def add_split_args(parser: argparse.ArgumentParser) -> None:
+    """CLI flags for choosing the CV split granularity (frame/recording/patient), shared across eval scripts."""
+    parser.add_argument("--split-by", choices=["frame", "recording", "patient"], default="frame")
+    parser.add_argument("--recording-index", default="data/recording_ids.pt")
+    parser.add_argument("--patient-index", default="data/patient_ids.pt")
+
+
+def build_test_splits(n: int, args: argparse.Namespace) -> list[tuple[list[int], list[int], list[int]]]:
+    """Frame-level (default) or grouped (recording/patient) k-fold splits, matching training."""
+    if getattr(args, "split_by", "frame") == "frame":
+        return kfold_indices(n, args.folds, args.seed)
+    index_path = args.recording_index if args.split_by == "recording" else args.patient_index
+    group_ids = torch.load(index_path, weights_only=True)
+    if len(group_ids) != n:
+        raise ValueError(f"{args.split_by} index has {len(group_ids)} frames, features have {n}")
+    return grouped_kfold_indices(group_ids, args.folds, args.seed)
+
+
 def latest_ckpt(log_dir: str, fold: int) -> str | None:
     paths = glob.glob(f"{log_dir}/fold_{fold}/lightning_logs/version_*/checkpoints/*.ckpt")
     if not paths:
@@ -69,6 +112,15 @@ def load_segmenter(model_type: str, ckpt: str, device: torch.device, batch_size:
         state = torch.load(ckpt, map_location="cpu", weights_only=False)["state_dict"]
         input_size = state["model.lstm_1.weight_ih_l0"].shape[1]
         lit = LitModelCRF.load_from_checkpoint(
+            ckpt, input_size=input_size, batch_size=batch_size, device=device, map_location=device
+        )
+    elif model_type == "lstm":
+        from hss.model.lit_model import LitModel
+
+        # Plain BiLSTM + softmax (the 2020 model): infer input_size the same way as the CRF above.
+        state = torch.load(ckpt, map_location="cpu", weights_only=False)["state_dict"]
+        input_size = state["model.lstm_1.weight_ih_l0"].shape[1]
+        lit = LitModel.load_from_checkpoint(
             ckpt, input_size=input_size, batch_size=batch_size, device=device, map_location=device
         )
     elif model_type == "tcn":
@@ -88,6 +140,31 @@ def decode(net: torch.nn.Module, x: torch.Tensor, method: str) -> torch.Tensor:
     if method == "marginal":
         return net.marginals(x).argmax(-1)
     return net.decode_valid(x)  # posterior
+
+
+def decode_preds(net: torch.nn.Module, x: torch.Tensor, model_type: str) -> torch.Tensor:
+    """Per-frame predictions (0-indexed) for any model type.
+
+    CRF/semi-CRF use decode_valid (constrained-posterior, guaranteed-valid cycle). The plain softmax LSTM
+    has no transition model — it argmaxes its per-frame LogSoftmax emissions independently, so nothing
+    enforces the S1->Systole->S2->Diastole ordering (that is exactly what `valid_cycle_fraction` measures).
+    """
+    if model_type == "lstm":
+        return net(x).argmax(-1)
+    return net.decode_valid(x)
+
+
+def valid_cycle_fraction(pred_rows: torch.Tensor) -> float:
+    """Fraction of decoded sequences that follow only valid cardiac transitions (self-loop or S1->Sys->S2->Dias->S1).
+
+    `pred_rows` is (n, T) with 0-indexed states; the validator expects 1-indexed labels, so shift by +1.
+    CRF decode_valid is 100% by construction; the softmax LSTM's number is the interesting one.
+    """
+    from hss.utils.sequence_validator import CardiacCycleValidator
+
+    validator = CardiacCycleValidator()
+    valid = sum(validator.validate_sequence((row + 1).tolist())[0] for row in pred_rows)
+    return valid / len(pred_rows)
 
 
 def get_device(accelerator: str) -> torch.device:

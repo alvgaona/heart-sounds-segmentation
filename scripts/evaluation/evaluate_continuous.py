@@ -50,12 +50,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-recordings", type=int, default=None, help="Cap recordings (smoke test)")
     parser.add_argument(
         "--split-by",
-        choices=["all", "recording"],
+        choices=["all", "recording", "patient"],
         default="all",
-        help="'all' (Stage 1): every recording under every fold model (leaked). 'recording' (Stage 2): only "
-        "each fold's held-out recordings (leakage-free; use with recording-level checkpoints).",
+        help="'all' (Stage 1): every recording under every fold model (leaked). 'recording'/'patient': only "
+        "each fold's held-out recordings/patients (leakage-free; use with the matching checkpoints).",
     )
-    parser.add_argument("--seed", type=int, default=68, help="Recording-split seed (must match training)")
+    parser.add_argument("--recording-index", default="data/recording_ids.pt")
+    parser.add_argument("--patient-index", default="data/patient_ids.pt")
+    parser.add_argument("--seed", type=int, default=68, help="Split seed (must match training)")
     parser.add_argument("--accelerator", choices=["auto", "cpu", "gpu", "mps"], default="cpu")
     return parser.parse_args()
 
@@ -104,6 +106,23 @@ def recording_test_folds(n_rec: int, k: int, seed: int) -> list[list[int]]:
     return [perm[i::k] for i in range(k)]
 
 
+def patient_test_folds(recording_index_path: str, patient_index_path: str, k: int, seed: int) -> list[list[int]]:
+    """Held-out RECORDING indices per fold when splitting by PATIENT (matches training's patient-level split).
+
+    Splits the patients (same sorted-unique + seeded perm as grouped_kfold), then returns, per fold, the
+    recordings whose patient is held out. Recording index r is the r-th contributing recording (framing order).
+    """
+    rec_ids = torch.load(recording_index_path, weights_only=True).tolist()
+    pat_ids = torch.load(patient_index_path, weights_only=True).tolist()
+    rec2pat: dict[int, int] = {}
+    for r, p in zip(rec_ids, pat_ids, strict=True):
+        rec2pat.setdefault(r, p)
+    patients = sorted(set(pat_ids))
+    perm = [patients[i] for i in torch.randperm(len(patients), generator=torch.Generator().manual_seed(seed)).tolist()]
+    n_rec = max(rec2pat) + 1
+    return [[r for r in range(n_rec) if rec2pat[r] in set(perm[i::k])] for i in range(k)]
+
+
 def main(args: argparse.Namespace) -> None:
     device = get_device(args.accelerator)
     factor = args.downsample
@@ -126,9 +145,14 @@ def main(args: argparse.Namespace) -> None:
         if args.max_recordings and len(recordings) >= args.max_recordings:
             break
     print(f"{len(recordings)} recordings (>= {args.frame_len} samples); feature dim {recordings[0][0].shape[-1]}")
-    rec_folds = recording_test_folds(len(recordings), args.folds, args.seed) if args.split_by == "recording" else None
+    if args.split_by == "recording":
+        rec_folds = recording_test_folds(len(recordings), args.folds, args.seed)
+    elif args.split_by == "patient":
+        rec_folds = patient_test_folds(args.recording_index, args.patient_index, args.folds, args.seed)
+    else:
+        rec_folds = None
     if rec_folds is not None:
-        print(f"Leakage-free eval: each fold scores only its held-out recordings (~{len(rec_folds[0])} each)")
+        print(f"Leakage-free ({args.split_by}): each fold scores only its held-out recordings (~{len(rec_folds[0])})")
 
     strategies = ["windowed", "stitch", "continuous"]
     per_fold: dict[str, dict[str, list[float]]] = {s: {"macro": [], "s1": []} for s in strategies}
@@ -192,7 +216,7 @@ def main(args: argparse.Namespace) -> None:
             f"{v.mean().item():.4f} ± {v.std(unbiased=True).item():.4f}" if v.numel() > 1 else f"{v.mean().item():.4f}"
         )
 
-    note = "leakage-free (held-out recordings)" if args.split_by == "recording" else "levels are leaked-optimistic"
+    note = "levels are leaked-optimistic" if args.split_by == "all" else f"leakage-free ({args.split_by})"
     print("\n" + "=" * 70)
     print(f"Continuous vs windowed decode (same model + recordings; {note})")
     print("=" * 70)

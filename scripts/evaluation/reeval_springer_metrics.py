@@ -7,7 +7,9 @@
   - 2-class F1: group states into {S1, Systole} and {S2, Diastole} and compute per-frame F1 for
     each group (Springer reports F1 for "S1+systole" and "S2+diastole").
 
-Predictions use decode_valid (constrained-posterior, guaranteed-valid cardiac cycle).
+CRF/semi-CRF predictions use decode_valid (constrained-posterior, guaranteed-valid cardiac cycle); the plain
+softmax LSTM (`--model lstm`, the 2020 baseline) argmaxes its per-frame emissions with no transition model. The
+valid-cycle % row makes the difference explicit: the CRF is 100% by construction, the LSTM is not.
 """
 
 import argparse
@@ -15,11 +17,14 @@ import argparse
 import torch
 from reeval_decoders import (
     DEFAULT_LOG_DIR,
+    add_split_args,
+    build_test_splits,
+    decode_preds,
     downsample_time,
     get_device,
-    kfold_indices,
     latest_ckpt,
     load_segmenter,
+    valid_cycle_fraction,
 )
 from torchmetrics.classification import F1Score
 
@@ -30,7 +35,7 @@ SOUNDS = {"S1": 0, "S2": 2}  # onset of these states
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--model", choices=["crf", "tcn", "semi_crf"], required=True)
+    parser.add_argument("--model", choices=["crf", "lstm", "tcn", "semi_crf"], required=True)
     parser.add_argument("--log-dir", default=None)
     parser.add_argument("--fsst-path", default="data/springer_fsst/springer_fsst.pt")
     parser.add_argument(
@@ -44,6 +49,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=68)
     parser.add_argument("--batch-size", type=int, default=50)
     parser.add_argument("--accelerator", choices=["auto", "cpu", "gpu", "mps"], default="cpu")
+    add_split_args(parser)
     return parser.parse_args()
 
 
@@ -90,10 +96,11 @@ def main(args: argparse.Namespace) -> None:
     ref_labels = torch.load(args.ref_labels_path, weights_only=True)["labels"]  # 1000 Hz onset reference
     onset_factor = ref_labels.shape[1] // features.shape[1]  # working rate -> 1000 Hz
     ref_len = onset_factor * features.shape[1]
-    splits = kfold_indices(len(features), args.folds, args.seed)
+    splits = build_test_splits(len(features), args)
 
     boundary: dict[tuple[str, int], list[float]] = {(s, t): [] for s in SOUNDS for t in TOLERANCES_MS}
     two_class: dict[str, list[float]] = {"S1+Systole": [], "S2+Diastole": []}
+    valid_cycle: list[float] = []
 
     for i in range(args.folds):
         ckpt = latest_ckpt(log_dir, i)
@@ -112,8 +119,9 @@ def main(args: argparse.Namespace) -> None:
         preds = []
         with torch.no_grad():
             for b in range(0, len(fx), args.batch_size):
-                preds.append(net.decode_valid(fx[b : b + args.batch_size].to(device)).cpu())
+                preds.append(decode_preds(net, fx[b : b + args.batch_size].to(device), args.model).cpu())
         pred_ds = torch.cat(preds)  # (n, T) at working rate
+        valid_cycle.append(valid_cycle_fraction(pred_ds))
         pred_full = pred_ds.repeat_interleave(onset_factor, dim=1)  # upsample to 1000 Hz for boundary match
 
         # boundary F1 (1000 Hz; tolerance in ms == samples)
@@ -147,6 +155,8 @@ def main(args: argparse.Namespace) -> None:
     print("2-class per-frame F1:")
     for name, vals in two_class.items():
         print(f"  {name}: {summarize(vals)}")
+    print("Valid-cycle fraction (S1->Systole->S2->Diastole transitions only):")
+    print(f"  {summarize(valid_cycle)}  (CRF/semi-CRF are 1.0000 by construction)")
 
 
 if __name__ == "__main__":
