@@ -22,7 +22,7 @@ underperforms.
 import argparse
 
 import torch
-from reeval_decoders import get_device, latest_ckpt, load_segmenter
+from reeval_decoders import decode_preds, get_device, latest_ckpt, load_segmenter, valid_cycle_fraction
 from reeval_springer_metrics import boundary_f1, onset_lists
 from torchmetrics.functional import f1_score
 
@@ -36,7 +36,7 @@ SOUNDS = {"S1": 0, "S2": 2}
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--model", choices=["crf", "tcn", "semi_crf"], default="crf")
+    parser.add_argument("--model", choices=["crf", "lstm", "tcn", "semi_crf"], default="crf")
     parser.add_argument("--log-dir", default="lightning_logs_crf_wsst_nv8")
     parser.add_argument("--dataset-path", default="data")
     parser.add_argument("--wavelet", choices=["amor", "bump"], default="amor")
@@ -155,7 +155,7 @@ def main(args: argparse.Namespace) -> None:
         print(f"Leakage-free ({args.split_by}): each fold scores only its held-out recordings (~{len(rec_folds[0])})")
 
     strategies = ["windowed", "stitch", "continuous"]
-    per_fold: dict[str, dict[str, list[float]]] = {s: {"macro": [], "s1": []} for s in strategies}
+    per_fold: dict[str, dict[str, list[float]]] = {s: {"macro": [], "s1": [], "valid": []} for s in strategies}
     onset_fold: dict[tuple[str, str, int], list[float]] = {
         (strat, snd, tol): [] for strat in ("stitch", "continuous") for snd in SOUNDS for tol in TOLERANCES_MS
     }
@@ -167,6 +167,7 @@ def main(args: argparse.Namespace) -> None:
             continue
         net = load_segmenter(args.model, ckpt, device, args.batch_size)
         preds: dict[str, list[torch.Tensor]] = {s: [] for s in strategies}
+        win_rows: list[torch.Tensor] = []  # per-window (n_win, win) preds, for per-window validity
         win_labels: list[torch.Tensor] = []
         cont_labels: list[torch.Tensor] = []
         onset_rows: dict[tuple[str, str], tuple[list, list]] = {}
@@ -178,13 +179,14 @@ def main(args: argparse.Namespace) -> None:
                 length = f_ds.shape[0]
                 starts = window_starts(length, win, win_stride)
                 windows = torch.stack([f_ds[s : s + win] for s in starts]).to(device)
-                pw = net.decode_valid(windows).cpu()
+                pw = decode_preds(net, windows, args.model).cpu()
 
+                win_rows.append(pw)
                 preds["windowed"].append(pw.reshape(-1))
                 win_labels.append(torch.cat([l_ds[s : s + win] for s in starts]))
                 cont_labels.append(l_ds)
                 preds["stitch"].append(stitch_central(pw, starts, win, length))
-                preds["continuous"].append(net.decode_valid(f_ds[None].to(device)).cpu()[0])
+                preds["continuous"].append(decode_preds(net, f_ds[None].to(device), args.model).cpu()[0])
 
                 t2 = length * factor
                 ref = labels_0[:t2]
@@ -199,10 +201,12 @@ def main(args: argparse.Namespace) -> None:
         frame_lab = torch.cat(cont_labels)
         per_fold["windowed"]["macro"].append(f1(torch.cat(preds["windowed"]), wl, "macro").item())
         per_fold["windowed"]["s1"].append(f1(torch.cat(preds["windowed"]), wl, "none")[0].item())
+        per_fold["windowed"]["valid"].append(valid_cycle_fraction(torch.cat(win_rows)))  # per 2 s window
         for strat in ("stitch", "continuous"):
             p = torch.cat(preds[strat])
             per_fold[strat]["macro"].append(f1(p, frame_lab, "macro").item())
             per_fold[strat]["s1"].append(f1(p, frame_lab, "none")[0].item())
+            per_fold[strat]["valid"].append(valid_cycle_fraction(preds[strat]))  # per FULL recording
             for snd in SOUNDS:
                 p_on, r_on = onset_rows[(strat, snd)]
                 for tol in TOLERANCES_MS:
@@ -220,9 +224,14 @@ def main(args: argparse.Namespace) -> None:
     print("\n" + "=" * 70)
     print(f"Continuous vs windowed decode (same model + recordings; {note})")
     print("=" * 70)
-    print(f"{'strategy':<12} {'macro F1':>20} {'S1 F1':>20}")
+    print(f"{'strategy':<12} {'macro F1':>18} {'S1 F1':>18} {'valid-cycle':>18}")
     for s in strategies:
-        print(f"{s:<12} {summ(per_fold[s]['macro']):>20} {summ(per_fold[s]['s1']):>20}")
+        row = f"{summ(per_fold[s]['macro']):>18} {summ(per_fold[s]['s1']):>18} {summ(per_fold[s]['valid']):>18}"
+        print(f"{s:<12} {row}")
+    print(
+        "(valid-cycle: 'windowed' = per 2 s window; 'stitch'/'continuous' = per FULL recording — the "
+        "deployment-level number. CRF continuous = 1.0 by construction.)"
+    )
     print("\nS1/S2 onset F1 @ 1000 Hz:")
     for snd in SOUNDS:
         for strat in ("stitch", "continuous"):
