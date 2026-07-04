@@ -34,6 +34,24 @@ def parse_args() -> argparse.Namespace:
         "K>1 runs K-fold CV (test = held-out fold, val carved from the rest) and reports mean±std.",
     )
     parser.add_argument(
+        "--split-by",
+        choices=["frame", "recording", "patient"],
+        default="frame",
+        help="CV split granularity. 'frame' (default) splits the flat frame stack (original behavior). "
+        "'recording'/'patient' group each recording's/patient's windows into one fold — no leakage. "
+        "'patient' matches Springer 2016 (135 patients). Needs the corresponding index and --folds >= 2.",
+    )
+    parser.add_argument(
+        "--recording-index",
+        default="data/recording_ids.pt",
+        help="frame->recording id tensor for --split-by recording (build with build_recording_index.py)",
+    )
+    parser.add_argument(
+        "--patient-index",
+        default="data/patient_ids.pt",
+        help="frame->patient id tensor for --split-by patient (135 Springer patients)",
+    )
+    parser.add_argument(
         "--downsample",
         type=int,
         default=1,
@@ -141,6 +159,33 @@ def kfold_indices(n: int, k: int, seed: int) -> list[tuple[list[int], list[int],
     return splits
 
 
+def grouped_kfold_indices(group_ids: torch.Tensor, k: int, seed: int) -> list[tuple[list[int], list[int], list[int]]]:
+    """K-fold splits that keep every group's frames in a single fold (no leakage across the group boundary).
+
+    A group is a recording or a patient. Splits the GROUPS round-robin (like kfold_indices splits frames),
+    carves 15% of the remaining groups for val, then maps group ids back to their frame indices. Robust to
+    non-contiguous ids (e.g. patient numbers 1..135); for contiguous 0..N-1 it matches the frame-level perm.
+    """
+    groups = torch.unique(group_ids).tolist()
+    frames_by_group: dict[int, list[int]] = {g: [] for g in groups}
+    for frame_idx, g in enumerate(group_ids.tolist()):
+        frames_by_group[g].append(frame_idx)
+
+    perm = [groups[i] for i in torch.randperm(len(groups), generator=torch.Generator().manual_seed(seed)).tolist()]
+    folds = [perm[i::k] for i in range(k)]
+
+    def to_frames(gs: list[int]) -> list[int]:
+        return [fi for g in gs for fi in frames_by_group[g]]
+
+    splits = []
+    for i in range(k):
+        test = folds[i]
+        rest = [g for j, f in enumerate(folds) if j != i for g in f]
+        val_size = int(0.15 * len(rest))
+        splits.append((to_frames(rest[val_size:]), to_frames(rest[:val_size]), to_frames(test)))
+    return splits
+
+
 def run_split(
     features: torch.Tensor,
     labels: torch.Tensor,
@@ -243,8 +288,20 @@ def main(args: argparse.Namespace) -> None:
         return
 
     # K-fold cross-validation.
+    if args.split_by in ("recording", "patient"):
+        index_path = args.recording_index if args.split_by == "recording" else args.patient_index
+        group_ids = torch.load(index_path, weights_only=True)
+        if len(group_ids) != n:
+            raise ValueError(f"{args.split_by} index has {len(group_ids)} frames, features have {n}")
+        fold_splits = grouped_kfold_indices(group_ids, args.folds, args.seed)
+        print(
+            f"{args.split_by.capitalize()}-level splits: {len(torch.unique(group_ids))} groups across {args.folds} folds"
+        )
+    else:
+        fold_splits = kfold_indices(n, args.folds, args.seed)
+
     all_results: list[dict[str, float]] = []
-    for i, split in enumerate(kfold_indices(n, args.folds, args.seed)):
+    for i, split in enumerate(fold_splits):
         print("\n" + "#" * 60)
         print(f"# FOLD {i + 1}/{args.folds}")
         print("#" * 60)
