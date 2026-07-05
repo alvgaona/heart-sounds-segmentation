@@ -11,6 +11,7 @@ valid-cycle for each, and ΔF1 = int8 - fp32. Also serialized size (fp32/fp16/in
 """
 
 import argparse
+import copy
 import io
 import time
 
@@ -66,20 +67,24 @@ def main(args: argparse.Namespace) -> None:
     two = F1Score(task="multiclass", num_classes=2, average=None)
     print(f"Model {args.model} | {args.log_dir} | dynamic INT8 (LSTM+Linear) | FSST patient")
 
-    acc: dict[str, list[float]] = {k: [] for k in ("f32_macro", "i8_macro", "f32_s1s", "i8_s1s", "f32_vc", "i8_vc")}
+    tags = ("f32", "fp16", "i8")
+    acc: dict[str, list[float]] = {f"{t}_{k}": [] for t in tags for k in ("macro", "s1s", "vc")}
     size_f32 = size_i8 = None
     for i in range(args.folds):
         ckpt = latest_ckpt(args.log_dir, i)
         if ckpt is None:
             continue
         net = load_segmenter(args.model, ckpt, cpu, args.batch_size).eval()
+        # CPU has no native fp16 compute, so a realistic CPU fp16 deployment stores weights in fp16 (2x smaller)
+        # and upcasts to fp32 to run: half()->float() reproduces exactly that (fp16-precision weights, fp32 ops).
+        net_fp16 = copy.deepcopy(net).half().float().eval()
         qnet = quantize_int8(net)
         if size_f32 is None:
             size_f32, size_i8 = serialized_mb(net), serialized_mb(qnet)
         _, _, test_idx = splits[i]
         fx, y = features[test_idx], labels_ds[test_idx]
 
-        for tag, model in (("f32", net), ("i8", qnet)):
+        for tag, model in (("f32", net), ("fp16", net_fp16), ("i8", qnet)):
             preds = []
             with torch.no_grad():
                 for b in range(0, len(fx), args.batch_size):
@@ -117,23 +122,20 @@ def main(args: argparse.Namespace) -> None:
     print("\n" + "=" * 66)
     print(f"Post-training dynamic INT8 — {args.model} (mean ± std over folds)")
     print("=" * 66)
-    d_macro = m(acc["i8_macro"]) - m(acc["f32_macro"])
+    print("precision  macro F1 (mean ± std)   ΔF1 vs fp32   2-class S1+Sys   valid-cycle")
+    for t in tags:
+        dd = m(acc[f"{t}_macro"]) - m(acc["f32_macro"])
+        print(
+            f"  {t:<6}  {m(acc[f'{t}_macro']):.4f} ± {s(acc[f'{t}_macro']):.4f}      {dd:+.4f}"
+            f"        {m(acc[f'{t}_s1s']):.4f}          {m(acc[f'{t}_vc']):.4f}"
+        )
     print(
-        f"macro F1     fp32 {m(acc['f32_macro']):.4f} ± {s(acc['f32_macro']):.4f} | "
-        f"int8 {m(acc['i8_macro']):.4f} ± {s(acc['i8_macro']):.4f} | ΔF1 {d_macro:+.4f}"
-    )
-    print(
-        f"2-class S1+Sys  fp32 {m(acc['f32_s1s']):.4f} | int8 {m(acc['i8_s1s']):.4f} | "
-        f"Δ {m(acc['i8_s1s']) - m(acc['f32_s1s']):+.4f}"
-    )
-    print(f"valid-cycle  fp32 {m(acc['f32_vc']):.4f} | int8 {m(acc['i8_vc']):.4f}")
-    print(
-        f"\nserialized size: fp32 {size_f32:.2f} MB | fp16 ~{size_f32 / 2:.2f} MB | int8 {size_i8:.2f} MB "
-        f"({size_f32 / size_i8:.1f}x smaller)"
+        f"\nserialized size: fp32 {size_f32:.2f} MB | fp16 {size_f32 / 2:.2f} MB (2×) | int8 {size_i8:.2f} MB "
+        f"({size_f32 / size_i8:.1f}×)"
     )
     print(
         f"BiLSTM forward latency (CPU, T={features.shape[1]}): fp32 {lat_f32:.2f} ms | int8 {lat_i8:.2f} ms "
-        f"({lat_f32 / lat_i8:.2f}x)"
+        f"({lat_f32 / lat_i8:.2f}×) | fp16 = fp32 on CPU (no native half compute; size-only win)"
     )
 
 
