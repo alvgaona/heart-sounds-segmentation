@@ -1,0 +1,184 @@
+"""Vendored minimal mLSTM (matrix-LSTM) core for the xLSTM emitter experiment.
+
+Implements the stabilized mLSTM operation from Beck et al. 2024 ("xLSTM: Extended Long
+Short-Term Memory", NeurIPS 2024) in pure PyTorch, in two numerically-equivalent forms:
+
+- ``mlstm_parallel``  — the O(T^2) parallel form used for training.
+- ``mlstm_step``      — the O(1)/step recurrent form used for streaming (Experiment B).
+
+Their equivalence (see ``tests/test_xlstm.py``) both validates the implementation and gives us
+the constant-memory streaming path. Numerical parity against the official ``xlstm`` package's
+``parallel_stabilized_simple`` backend is checked separately on GPU (see
+``scripts/xlstm/probe_official_xlstm.py`` + the parity test) — this core targets that *operator*
+(q, k, v, input-gate, forget-gate -> h), not the full LM block.
+
+Why vendored rather than the official package: this runs identically on CPU/MPS/CUDA (the repo
+defaults to CPU; the official sLSTM fast path is CUDA-only), quantizes/exports cleanly for the C8
+deployability story, and exposes the explicit per-step recurrence Experiment B needs.
+"""
+
+from __future__ import annotations
+
+import math
+
+import torch
+import torch.nn.functional as F
+from torch import nn
+
+
+MLSTMState = tuple[torch.Tensor, torch.Tensor, torch.Tensor]
+
+
+def mlstm_parallel(
+    q: torch.Tensor,
+    k: torch.Tensor,
+    v: torch.Tensor,
+    igate_preact: torch.Tensor,
+    fgate_preact: torch.Tensor,
+    *,
+    eps: float = 1e-6,
+) -> torch.Tensor:
+    """Stabilized parallel mLSTM operator.
+
+    Args:
+        q, k, v: ``(B, NH, T, DH)`` per-head query/key/value.
+        igate_preact, fgate_preact: ``(B, NH, T, 1)`` input/forget gate pre-activations.
+        eps: numerical floor for the normalizer.
+
+    Returns:
+        ``(B, NH, T, DH)`` hidden states, before any output gate.
+    """
+    _, _, T, DH = q.shape
+
+    log_f = F.logsigmoid(fgate_preact)  # (B, NH, T, 1)
+    # cumulative forget mass with a leading zero so differences give inclusive sums
+    log_f_cumsum = torch.cat([torch.zeros_like(log_f[:, :, :1, :]), log_f.cumsum(dim=-2)], dim=-2)  # (B,NH,T+1,1)
+
+    # log_fg[i, j] = sum_{s=j+1..i} log_f_s  (drop the padded row/col), masked to i >= j
+    log_fg = (log_f_cumsum - log_f_cumsum.transpose(-2, -1))[:, :, 1:, 1:]  # (B, NH, T, T)
+    causal = torch.tril(torch.ones(T, T, dtype=torch.bool, device=q.device))
+    log_fg = log_fg.masked_fill(~causal, float("-inf"))
+
+    # add the input gate at the source position j (broadcast over rows i)
+    log_d = log_fg + igate_preact.transpose(-2, -1)  # (B, NH, T, T)
+    m, _ = log_d.max(dim=-1, keepdim=True)  # (B, NH, T, 1) row-wise stabilizer
+    d = torch.exp(log_d - m)  # (B, NH, T, T)
+
+    qk = (q @ k.transpose(-2, -1)) / math.sqrt(DH)  # (B, NH, T, T)
+    c = qk * d
+    denom = torch.maximum(c.sum(dim=-1, keepdim=True).abs(), torch.exp(-m))  # (B, NH, T, 1)
+    c = c / (denom + eps)
+    return c @ v  # (B, NH, T, DH)
+
+
+def mlstm_init_state(batch: int, num_heads: int, head_dim: int, *, device=None, dtype=torch.float32) -> MLSTMState:
+    """Zero cell (C), normalizer (n) and stabilizer (m) states for the recurrent form."""
+    c = torch.zeros(batch, num_heads, head_dim, head_dim, device=device, dtype=dtype)
+    n = torch.zeros(batch, num_heads, head_dim, 1, device=device, dtype=dtype)
+    m = torch.zeros(batch, num_heads, 1, 1, device=device, dtype=dtype)
+    return c, n, m
+
+
+def mlstm_step(
+    state: MLSTMState,
+    q_t: torch.Tensor,
+    k_t: torch.Tensor,
+    v_t: torch.Tensor,
+    igate_t: torch.Tensor,
+    fgate_t: torch.Tensor,
+    *,
+    eps: float = 1e-6,
+) -> tuple[torch.Tensor, MLSTMState]:
+    """One stabilized recurrent mLSTM step (O(1) memory).
+
+    Args:
+        state: ``(C, n, m)`` from ``mlstm_init_state`` or a previous step.
+        q_t, k_t, v_t: ``(B, NH, DH, 1)`` per-head vectors at this step.
+        igate_t, fgate_t: ``(B, NH, 1, 1)`` gate pre-activations at this step.
+
+    Returns:
+        ``(h_t, new_state)`` with ``h_t`` of shape ``(B, NH, DH, 1)`` (before output gate).
+    """
+    c_prev, n_prev, m_prev = state
+    dh = q_t.shape[-2]
+
+    log_f = F.logsigmoid(fgate_t)  # (B, NH, 1, 1)
+    m_new = torch.maximum(log_f + m_prev, igate_t)  # (B, NH, 1, 1)
+    i_stab = torch.exp(igate_t - m_new)
+    f_stab = torch.exp(log_f + m_prev - m_new)
+
+    c = f_stab * c_prev + i_stab * (v_t @ k_t.transpose(-2, -1))  # (B, NH, DH, DH)
+    n = f_stab * n_prev + i_stab * k_t  # (B, NH, DH, 1)
+
+    q_scaled = q_t / math.sqrt(dh)
+    num = c @ q_scaled  # (B, NH, DH, 1)
+    denom = torch.maximum((n.transpose(-2, -1) @ q_scaled).abs(), torch.exp(-m_new))  # (B, NH, 1, 1)
+    h = num / (denom + eps)
+    return h, (c, n, m_new)
+
+
+class mLSTMLayer(nn.Module):
+    """A single multi-head mLSTM layer: input projections -> mLSTM operator -> output gate.
+
+    Causal (unidirectional). Wrap two of these (forward + reversed) for a bidirectional encoder.
+    """
+
+    def __init__(self, input_size: int, hidden_size: int, num_heads: int = 4) -> None:
+        super().__init__()
+        if hidden_size % num_heads != 0:
+            raise ValueError(f"hidden_size {hidden_size} must be divisible by num_heads {num_heads}")
+        self.hidden_size = hidden_size
+        self.num_heads = num_heads
+        self.head_dim = hidden_size // num_heads
+
+        self.q = nn.Linear(input_size, hidden_size)
+        self.k = nn.Linear(input_size, hidden_size)
+        self.v = nn.Linear(input_size, hidden_size)
+        self.igate = nn.Linear(input_size, num_heads)
+        self.fgate = nn.Linear(input_size, num_heads)
+        self.ogate = nn.Linear(input_size, hidden_size)
+        self.norm = nn.LayerNorm(hidden_size)
+
+    def _project(self, x: torch.Tensor):
+        b, t, _ = x.shape
+        nh, dh = self.num_heads, self.head_dim
+
+        def heads(proj: torch.Tensor) -> torch.Tensor:
+            return proj.view(b, t, nh, dh).transpose(1, 2)  # (B, NH, T, DH)
+
+        q, k, v = heads(self.q(x)), heads(self.k(x)), heads(self.v(x))
+        ig = self.igate(x).permute(0, 2, 1).unsqueeze(-1)  # (B, NH, T, 1)
+        fg = self.fgate(x).permute(0, 2, 1).unsqueeze(-1)  # (B, NH, T, 1)
+        return q, k, v, ig, fg
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Parallel forward. ``x``: (B, T, input_size) -> (B, T, hidden_size)."""
+        b, t, _ = x.shape
+        q, k, v, ig, fg = self._project(x)
+        h = mlstm_parallel(q, k, v, ig, fg)  # (B, NH, T, DH)
+        h = h.transpose(1, 2).reshape(b, t, self.hidden_size)  # (B, T, H)
+        h = self.norm(h) * torch.sigmoid(self.ogate(x))
+        return h
+
+
+class BidirectionalXLSTMEncoder(nn.Module):
+    """Drop-in replacement for the 2-layer BiLSTM emitter core.
+
+    Produces ``(B, T, 2 * hidden_size)`` so the existing ``Linear(2H -> 4)`` classification /
+    CRF-emission head is unchanged. Each layer runs a forward and a reversed ``mLSTMLayer`` and
+    concatenates them (mirroring ``bidirectional=True`` in ``nn.LSTM``).
+    """
+
+    def __init__(self, input_size: int, hidden_size: int = 240, num_heads: int = 4, num_layers: int = 2) -> None:
+        super().__init__()
+        self.hidden_size = hidden_size
+        dims = [input_size] + [2 * hidden_size] * (num_layers - 1)
+        self.fwd = nn.ModuleList(mLSTMLayer(d, hidden_size, num_heads) for d in dims)
+        self.bwd = nn.ModuleList(mLSTMLayer(d, hidden_size, num_heads) for d in dims)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        for fwd, bwd in zip(self.fwd, self.bwd, strict=True):
+            f = fwd(x)
+            b = bwd(x.flip(1)).flip(1)
+            x = torch.cat([f, b], dim=-1)
+        return x
