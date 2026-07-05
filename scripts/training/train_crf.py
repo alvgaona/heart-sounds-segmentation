@@ -270,7 +270,8 @@ def _print_cv_summary(all_results: list[dict[str, float]], k: int) -> None:
 def main(args: argparse.Namespace) -> None:
     device, accelerator = get_device(args.accelerator)
     print(f"Using device: {device} (accelerator: {accelerator})")
-    print("Training with (Bi)LSTM + CRF model")
+    emitter = "xLSTM" if args.arch == "xlstm" else "BiLSTM"
+    print(f"Training with {emitter} + CRF model")
     if args.boundary_loss:
         print(
             f"Boundary-aware aux loss ON: lambda={args.aux_lambda}, boundary_weight={args.boundary_weight}, "
