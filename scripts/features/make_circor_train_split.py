@@ -22,6 +22,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--in", dest="inp", required=True, help="precompute_circor.py output (.pt)")
     parser.add_argument("--out", required=True, help="training feature file to write (.pt)")
     parser.add_argument("--patient-out", default="data/circor_patient_ids.pt", help="frame->patient index (.pt)")
+    parser.add_argument(
+        "--ref-out",
+        default=None,
+        help="Optional {labels: 1000 Hz labels_hr of kept windows} for onset-F1 references when re-evaluating "
+        "the in-domain checkpoints with reeval_springer_metrics.py (--ref-labels-path).",
+    )
     return parser.parse_args()
 
 
@@ -35,6 +41,9 @@ def main(args: argparse.Namespace) -> None:
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     torch.save({"features": feats, "labels": labs}, args.out)
     torch.save(pat, args.patient_out)
+    if args.ref_out:
+        torch.save({"labels": d["labels_hr"][keep].long()}, args.ref_out)
+        print(f"onset ref (1000 Hz) -> {args.ref_out}")
     print(
         f"kept {int(keep.sum())}/{len(keep)} windows ({keep.float().mean():.1%}); dropped {int((~keep).sum())} "
         f"with any -1 | patients {len(torch.unique(pat))} | labels {sorted(torch.unique(labs).tolist())}"
