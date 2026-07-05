@@ -159,6 +159,34 @@ class TestViterbiDecode:
         assert best_tags[0, 15].item() == 2  # S2
         assert best_tags[0, 22].item() == 3  # Diastole
 
+    def test_decode_is_score_optimal(self):
+        """Viterbi must return a path scoring >= any feasible path under the model's own scorer.
+
+        Regression guard for the backtracking off-by-one that dropped the first frame of every internal
+        segment (start = prev_t + 1 instead of prev_t): it made decode() return corrupted, sub-optimal,
+        cycle-breaking paths. The shape/range/mid-segment tests above missed it because it only corrupts
+        segment-boundary frames.
+        """
+        crf = SemiMarkovCRF(num_tags=4, max_duration=15)
+
+        # Strong emissions favouring a multi-cycle path with many segment boundaries (7 segments). The
+        # off-by-one drops the first frame of each internal segment, so a correct decode and the buggy one
+        # diverge at every boundary; the score gap is large and unambiguous here.
+        pattern = [0] * 4 + [1] * 4 + [2] * 4 + [3] * 4 + [0] * 4 + [1] * 4 + [2] * 4  # 28 frames
+        emissions = torch.full((1, len(pattern), 4), -10.0)
+        for i, s in enumerate(pattern):
+            emissions[0, i, s] = 10.0
+        intended = torch.tensor([pattern])
+
+        decoded = crf.decode(emissions)
+        s_decoded = float(crf._score_path(emissions, decoded)[0])
+        s_intended = float(crf._score_path(emissions, intended)[0])
+
+        # A correct Viterbi must score at least as high as any feasible path (the intended one is feasible).
+        assert s_decoded + 1e-4 >= s_intended, f"decode() scored {s_decoded:.2f} < feasible path {s_intended:.2f}"
+        # With emissions this strong the MAP is exactly the intended pattern (the buggy decode is not).
+        assert torch.equal(decoded[0], intended[0]), f"decode did not recover the pattern: {decoded[0].tolist()}"
+
 
 class TestForwardAlgorithm:
     """Tests for the forward algorithm (partition function)."""

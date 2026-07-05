@@ -914,7 +914,10 @@ class SemiMarkovCRF(nn.Module):
                 prev_t = backpointers[b, t, s, 0].item()
                 prev_s = backpointers[b, t, s, 1].item()
 
-                start = prev_t + 1 if prev_t >= 0 else 0
+                # Segment ending at V-index t with prev_t = t - duration covers emission frames [prev_t, t);
+                # prev_t = -1 is the case-1 sentinel (segment starts at frame 0). Using prev_t+1 here dropped
+                # the first frame of every internal segment, defaulting it to state 0 and breaking the cycle.
+                start = max(prev_t, 0)
                 segments.append((s, start, t))
                 best_tags[b, start:t] = s
 
