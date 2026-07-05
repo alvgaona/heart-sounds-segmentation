@@ -29,6 +29,12 @@ from torch import nn
 MLSTMState = tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 
 
+def _bias_linspace_init_(bias: torch.Tensor, start: float, end: float) -> None:
+    """Fill a 1-D bias with evenly spaced values in ``[start, end]`` (official xLSTM init)."""
+    with torch.no_grad():
+        bias.copy_(torch.linspace(start, end, bias.numel()))
+
+
 def mlstm_parallel(
     q: torch.Tensor,
     k: torch.Tensor,
@@ -138,6 +144,17 @@ class mLSTMLayer(nn.Module):
         self.fgate = nn.Linear(input_size, num_heads)
         self.ogate = nn.Linear(input_size, hidden_size)
         self.norm = nn.LayerNorm(hidden_size)
+        self.reset_gate_parameters()
+
+    def reset_gate_parameters(self) -> None:
+        """Official xLSTM gate init: zero the gate weights (input-independent at init) and bias the
+        forget gate toward remembering (linspace 3->6 across heads => retention ~0.95-0.998), so the
+        model starts with long memory instead of a ~1-step half-life. See Beck et al. 2024.
+        """
+        nn.init.zeros_(self.fgate.weight)
+        _bias_linspace_init_(self.fgate.bias, 3.0, 6.0)
+        nn.init.zeros_(self.igate.weight)
+        nn.init.normal_(self.igate.bias, mean=0.0, std=0.1)
 
     def _project(self, x: torch.Tensor):
         b, t, _ = x.shape
