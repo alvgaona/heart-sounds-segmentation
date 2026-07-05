@@ -12,6 +12,7 @@ from torchmetrics.classification import AUROC, Accuracy, F1Score, Precision, Rec
 
 from hss.model.boundary_loss import BoundaryLossConfig, boundary_weighted_ce
 from hss.model.segmenter_crf import HeartSoundSegmenterCRF
+from hss.model.segmenter_xlstm import HeartSoundSegmenterXLSTMCRF
 
 
 class LitModelCRF(pl.LightningModule):
@@ -24,13 +25,24 @@ class LitModelCRF(pl.LightningModule):
         device: torch.device,
         lr: float = 0.01,
         boundary_cfg: BoundaryLossConfig | None = None,
+        arch: str = "bilstm",
     ) -> None:
         super().__init__()
-        self.model = HeartSoundSegmenterCRF(
-            input_size=input_size,
-            batch_size=batch_size,
-            device=device,
-        )
+        if arch == "xlstm":
+            self.model = HeartSoundSegmenterXLSTMCRF(
+                input_size=input_size,
+                batch_size=batch_size,
+                device=device,
+            )
+        elif arch == "bilstm":
+            self.model = HeartSoundSegmenterCRF(
+                input_size=input_size,
+                batch_size=batch_size,
+                device=device,
+            )
+        else:
+            raise ValueError(f"unknown arch {arch!r} (expected 'bilstm' or 'xlstm')")
+        self.arch = arch
         self.batch_size = batch_size
         self.lr = lr
         self.boundary_cfg = boundary_cfg or BoundaryLossConfig()

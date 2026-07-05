@@ -84,6 +84,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--log-dir", default="lightning_logs_crf", help="Trainer default_root_dir for logs/checkpoints")
     parser.add_argument("--lr", type=float, default=0.01, help="Adam learning rate")
     parser.add_argument(
+        "--arch",
+        choices=["bilstm", "xlstm"],
+        default="bilstm",
+        help="Recurrent emitter: 2-layer BiLSTM (default) or the vendored xLSTM (Experiment A)",
+    )
+    parser.add_argument(
         "--boundary-loss",
         action="store_true",
         help="Add the S1-focused boundary-aware auxiliary loss (weighted per-frame CE on emissions) "
@@ -228,6 +234,7 @@ def run_split(
         device=device,
         lr=args.lr,
         boundary_cfg=build_boundary_cfg(args),
+        arch=args.arch,
     )
     trainer = pl.Trainer(
         max_epochs=args.max_epochs,
