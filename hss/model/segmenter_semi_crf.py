@@ -101,20 +101,18 @@ class HeartSoundSegmenterSemiCRF(nn.Module):
         Returns:
             Emission scores of shape (batch_size, sequence_length, num_tags)
         """
-        # .contiguous() because slicing a partial batch (x.shape[0] < batch_size) yields a
-        # non-contiguous view, which the CUDA LSTM kernel rejects ("rnn: hx is not contiguous").
+        # Encoder kept BYTE-IDENTICAL to HeartSoundSegmenterCRF._get_emissions so that CRF vs semi-CRF is a
+        # clean ablation (only the top layer differs): chain lstm_1's final (hn, cn) into lstm_2, relu->dropout.
+        # .contiguous() because slicing a partial batch yields a non-contiguous view the CUDA LSTM rejects.
         h0 = self.h0[:, : x.shape[0], :].contiguous()
         c0 = self.c0[:, : x.shape[0], :].contiguous()
-
-        out, _ = self.lstm_1(x, (h0, c0))
-        out = self.dropout(out)
-        out = self.relu(out)
-        out, _ = self.lstm_2(out, (h0, c0))
-        out = self.dropout(out)
-        out = self.relu(out)
-
-        emissions = self.linear(out)
-        return emissions
+        output, (hn, cn) = self.lstm_1(x, (h0, c0))
+        output = self.relu(output)
+        output = self.dropout(output)
+        output, _ = self.lstm_2(output, (hn, cn))
+        output = self.relu(output)
+        output = self.dropout(output)
+        return self.linear(output)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass returning emission scores.
