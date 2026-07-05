@@ -52,6 +52,19 @@ def parse_args() -> argparse.Namespace:
         help="frame->patient id tensor for --split-by patient (135 Springer patients)",
     )
     parser.add_argument(
+        "--extra-train-path",
+        default=None,
+        help="Feature .pt (same dim) ALWAYS added to the train set of every fold, never validated/tested. "
+        "For joint cross-dataset training (e.g. --fsst-path CirCor, --extra-train-path Springer). CV folds are "
+        "still defined only over --fsst-path, so the test set stays the held-out --fsst-path subset.",
+    )
+    parser.add_argument(
+        "--extra-downsample",
+        type=int,
+        default=1,
+        help="Avg-pool factor for --extra-train-path (20 for 1000 Hz Springer)",
+    )
+    parser.add_argument(
         "--downsample",
         type=int,
         default=1,
@@ -269,6 +282,21 @@ def main(args: argparse.Namespace) -> None:
 
     n = len(features)
 
+    # Joint training: append an extra dataset (e.g. Springer) to every fold's TRAIN set. CV folds below are
+    # defined over the first n frames only, so the test set stays the held-out --fsst-path subset.
+    extra_idx: list[int] = []
+    if args.extra_train_path:
+        extra = torch.load(args.extra_train_path, weights_only=True, mmap=args.extra_downsample > 1)
+        ef, el = extra["features"], extra["labels"]
+        if args.extra_downsample > 1:
+            ef, el = downsample_time(ef, el, args.extra_downsample)
+        if ef.shape[-1] != features.shape[-1]:
+            raise ValueError(f"extra feature dim {ef.shape[-1]} != main {features.shape[-1]}")
+        extra_idx = list(range(n, n + len(ef)))
+        features = torch.cat([features, ef])
+        labels = torch.cat([labels, el])
+        print(f"Joint: +{len(ef)} extra train frames from {args.extra_train_path} (always in train)")
+
     if args.folds <= 1:
         # Single 70/15/15 split (test and val are each 15%).
         test_size = int(0.15 * n)
@@ -294,9 +322,8 @@ def main(args: argparse.Namespace) -> None:
         if len(group_ids) != n:
             raise ValueError(f"{args.split_by} index has {len(group_ids)} frames, features have {n}")
         fold_splits = grouped_kfold_indices(group_ids, args.folds, args.seed)
-        print(
-            f"{args.split_by.capitalize()}-level splits: {len(torch.unique(group_ids))} groups across {args.folds} folds"
-        )
+        n_groups = len(torch.unique(group_ids))
+        print(f"{args.split_by.capitalize()}-level splits: {n_groups} groups across {args.folds} folds")
     else:
         fold_splits = kfold_indices(n, args.folds, args.seed)
 
@@ -305,6 +332,7 @@ def main(args: argparse.Namespace) -> None:
         print("\n" + "#" * 60)
         print(f"# FOLD {i + 1}/{args.folds}")
         print("#" * 60)
+        split = (list(split[0]) + extra_idx, split[1], split[2])  # extra data is train-only
         test_results = run_split(features, labels, split, args, device, accelerator, f"{args.log_dir}/fold_{i}")
         for key, value in sorted(test_results.items()):
             print(f"{key}: {value:.4f}")

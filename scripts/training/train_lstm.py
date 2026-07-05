@@ -48,6 +48,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--recording-index", default="data/recording_ids.pt", help="frame->recording id tensor")
     parser.add_argument("--patient-index", default="data/patient_ids.pt", help="frame->patient id tensor")
     parser.add_argument(
+        "--extra-train-path",
+        default=None,
+        help="Feature .pt (same dim) ALWAYS added to every fold's train set, never validated/tested; CV folds "
+        "stay defined over --fsst-path only. For joint cross-dataset training (--fsst-path CirCor, extra Springer).",
+    )
+    parser.add_argument(
+        "--extra-downsample",
+        type=int,
+        default=1,
+        help="Avg-pool factor for --extra-train-path (20 for 1000 Hz Springer)",
+    )
+    parser.add_argument(
         "--downsample",
         type=int,
         default=1,
@@ -232,6 +244,21 @@ def main(args: argparse.Namespace) -> None:
 
     n = len(features)
 
+    # Joint training: append an extra dataset (e.g. Springer) to every fold's TRAIN set only; folds stay over
+    # the first n frames so the test set remains the held-out --fsst-path subset.
+    extra_idx: list[int] = []
+    if args.extra_train_path:
+        extra = torch.load(args.extra_train_path, weights_only=True, mmap=args.extra_downsample > 1)
+        ef, el = extra["features"], extra["labels"]
+        if args.extra_downsample > 1:
+            ef, el = downsample_time(ef, el, args.extra_downsample)
+        if ef.shape[-1] != features.shape[-1]:
+            raise ValueError(f"extra feature dim {ef.shape[-1]} != main {features.shape[-1]}")
+        extra_idx = list(range(n, n + len(ef)))
+        features = torch.cat([features, ef])
+        labels = torch.cat([labels, el])
+        print(f"Joint: +{len(ef)} extra train frames from {args.extra_train_path} (always in train)")
+
     if args.folds <= 1:
         # Single 70/15/15 split (test and val are each 15%).
         test_size = int(0.15 * n)
@@ -256,6 +283,7 @@ def main(args: argparse.Namespace) -> None:
         print("\n" + "#" * 60)
         print(f"# FOLD {i + 1}/{args.folds}")
         print("#" * 60)
+        split = (list(split[0]) + extra_idx, split[1], split[2])  # extra data is train-only
         test_results = run_split(features, labels, split, args, device, accelerator, f"{args.log_dir}/fold_{i}")
         for key, value in sorted(test_results.items()):
             print(f"{key}: {value:.4f}")
