@@ -37,6 +37,9 @@ SOUNDS = {"S1": 0, "S2": 2}  # 0-indexed states whose onsets we score
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model", choices=["crf", "lstm", "semi_crf"], default="crf")
+    parser.add_argument(
+        "--arch", choices=["bilstm", "xlstm"], default="bilstm", help="emitter for --model crf (BiLSTM or xLSTM)"
+    )
     parser.add_argument("--log-dir", default=None, help="Springer fold-checkpoint root (default per model)")
     parser.add_argument("--circor-path", default="data/circor_wsst_nv8/circor_wsst.pt")
     parser.add_argument("--folds", type=int, default=10, help="Number of Springer fold checkpoints to average")
@@ -82,7 +85,7 @@ def main(args: argparse.Namespace) -> None:
         if ckpt is None:
             print(f"fold {i + 1}: no checkpoint, skipping")
             continue
-        net = load_segmenter(args.model, ckpt, device, args.batch_size)
+        net = load_segmenter(args.model, ckpt, device, args.batch_size, args.arch)
         preds = []
         with torch.no_grad():
             for b in range(0, len(feats), args.batch_size):
