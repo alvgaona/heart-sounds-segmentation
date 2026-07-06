@@ -115,12 +115,22 @@ def load_segmenter(
         from hss.model.lit_model_crf import LitModelCRF
 
         # Infer input_size from the checkpoint (44 for FSST-only, 46 with envelope fusion) so both load.
-        # The xLSTM emitter has no lstm_1 buffer; read input_size from its first projection instead.
         state = torch.load(ckpt, map_location="cpu", weights_only=False)["state_dict"]
-        key = "model.encoder.fwd.0.q.weight" if arch == "xlstm" else "model.lstm_1.weight_ih_l0"
-        input_size = state[key].shape[1]
+        if arch == "xlstm":
+            # The xLSTM has no lstm_1 buffer: read its shape from the encoder so any hidden/heads/layers load.
+            q = state["model.encoder.fwd.0.q.weight"]  # (hidden_size, input_size)
+            extra = {
+                "hidden_size": q.shape[0],
+                "num_heads": state["model.encoder.fwd.0.fgate.weight"].shape[0],  # fgate: Linear(input, heads)
+                "num_layers": len({k.split(".")[3] for k in state if k.startswith("model.encoder.fwd.")}),
+            }
+            input_size = q.shape[1]
+        else:
+            ih = state["model.lstm_1.weight_ih_l0"]  # (4 * hidden_size, input_size) — LSTM has 4 gates
+            extra = {"hidden_size": ih.shape[0] // 4}
+            input_size = ih.shape[1]
         lit = LitModelCRF.load_from_checkpoint(
-            ckpt, input_size=input_size, batch_size=batch_size, device=device, arch=arch, map_location=device
+            ckpt, input_size=input_size, batch_size=batch_size, device=device, arch=arch, map_location=device, **extra
         )
     elif model_type in ("lstm", "lstm_valid"):
         from hss.model.lit_model import LitModel

@@ -26,6 +26,9 @@ class LitModelCRF(pl.LightningModule):
         lr: float = 0.01,
         boundary_cfg: BoundaryLossConfig | None = None,
         arch: str = "bilstm",
+        hidden_size: int = 240,
+        num_heads: int = 4,
+        num_layers: int = 2,
     ) -> None:
         super().__init__()
         if arch == "xlstm":
@@ -33,12 +36,16 @@ class LitModelCRF(pl.LightningModule):
                 input_size=input_size,
                 batch_size=batch_size,
                 device=device,
+                hidden_size=hidden_size,
+                num_heads=num_heads,
+                num_layers=num_layers,
             )
         elif arch == "bilstm":
             self.model = HeartSoundSegmenterCRF(
                 input_size=input_size,
                 batch_size=batch_size,
                 device=device,
+                hidden_size=hidden_size,
             )
         else:
             raise ValueError(f"unknown arch {arch!r} (expected 'bilstm' or 'xlstm')")

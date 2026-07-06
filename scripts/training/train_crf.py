@@ -89,6 +89,9 @@ def parse_args() -> argparse.Namespace:
         default="bilstm",
         help="Recurrent emitter: 2-layer BiLSTM (default) or the vendored xLSTM (Experiment A)",
     )
+    parser.add_argument("--xlstm-hidden", type=int, default=240, help="Per-direction hidden width (xLSTM/BiLSTM)")
+    parser.add_argument("--xlstm-heads", type=int, default=4, help="mLSTM heads per layer (must divide hidden)")
+    parser.add_argument("--xlstm-layers", type=int, default=2, help="Number of stacked bidirectional mLSTM layers")
     parser.add_argument(
         "--boundary-loss",
         action="store_true",
@@ -235,6 +238,9 @@ def run_split(
         lr=args.lr,
         boundary_cfg=build_boundary_cfg(args),
         arch=args.arch,
+        hidden_size=args.xlstm_hidden,
+        num_heads=args.xlstm_heads,
+        num_layers=args.xlstm_layers,
     )
     trainer = pl.Trainer(
         max_epochs=args.max_epochs,
