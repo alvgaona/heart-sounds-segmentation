@@ -15,7 +15,7 @@ import torch
 from torch import nn
 
 from hss.model.crf import CRF
-from hss.model.xlstm import BidirectionalXLSTMEncoder
+from hss.model.xlstm import BidirectionalXLSTMEncoder, CausalXLSTMEncoder
 from hss.utils.sequence_validator import validate_and_correct_predictions
 
 
@@ -42,6 +42,7 @@ class HeartSoundSegmenterXLSTMCRF(nn.Module):
         num_heads: int = 4,
         num_layers: int = 2,
         dropout: float = 0.2,
+        bidirectional: bool = True,
         device: torch.device | None = None,
         dtype: torch.dtype = torch.float32,
     ) -> None:
@@ -50,15 +51,17 @@ class HeartSoundSegmenterXLSTMCRF(nn.Module):
         self.device = device if device is not None else torch.device("cpu")
         self.batch_size = batch_size
         self.num_tags = 4  # S1, Systole, S2, Diastole
+        self.bidirectional = bidirectional
 
-        self.encoder = BidirectionalXLSTMEncoder(
-            input_size=input_size,
-            hidden_size=hidden_size,
-            num_heads=num_heads,
-            num_layers=num_layers,
-        )
+        if bidirectional:
+            self.encoder = BidirectionalXLSTMEncoder(input_size, hidden_size, num_heads, num_layers)
+            enc_out = hidden_size * 2
+        else:
+            # Causal (unidirectional) — streamable in real time (Experiment B); half the encoder width.
+            self.encoder = CausalXLSTMEncoder(input_size, hidden_size, num_heads, num_layers)
+            enc_out = hidden_size
         self.dropout = nn.Dropout(dropout)
-        self.linear = nn.Linear(in_features=hidden_size * 2, out_features=self.num_tags, bias=True)
+        self.linear = nn.Linear(in_features=enc_out, out_features=self.num_tags, bias=True)
 
         self.crf = CRF(num_tags=self.num_tags)
         self._init_crf_transitions()

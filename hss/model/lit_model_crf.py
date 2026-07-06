@@ -29,6 +29,7 @@ class LitModelCRF(pl.LightningModule):
         hidden_size: int = 240,
         num_heads: int = 4,
         num_layers: int = 2,
+        bidirectional: bool = True,
     ) -> None:
         super().__init__()
         if arch == "xlstm":
@@ -39,6 +40,7 @@ class LitModelCRF(pl.LightningModule):
                 hidden_size=hidden_size,
                 num_heads=num_heads,
                 num_layers=num_layers,
+                bidirectional=bidirectional,
             )
         elif arch == "bilstm":
             self.model = HeartSoundSegmenterCRF(

@@ -117,12 +117,16 @@ def load_segmenter(
         # Infer input_size from the checkpoint (44 for FSST-only, 46 with envelope fusion) so both load.
         state = torch.load(ckpt, map_location="cpu", weights_only=False)["state_dict"]
         if arch == "xlstm":
-            # The xLSTM has no lstm_1 buffer: read its shape from the encoder so any hidden/heads/layers load.
-            q = state["model.encoder.fwd.0.q.weight"]  # (hidden_size, input_size)
+            # The xLSTM has no lstm_1 buffer: read its shape from the encoder so any config loads.
+            # Bidirectional keys live under encoder.fwd.*; causal (Experiment B) under encoder.layers.*.
+            bidir = any(k.startswith("model.encoder.fwd.") for k in state)
+            stem = "model.encoder.fwd." if bidir else "model.encoder.layers."
+            q = state[f"{stem}0.q.weight"]  # (hidden_size, input_size)
             extra = {
                 "hidden_size": q.shape[0],
-                "num_heads": state["model.encoder.fwd.0.fgate.weight"].shape[0],  # fgate: Linear(input, heads)
-                "num_layers": len({k.split(".")[3] for k in state if k.startswith("model.encoder.fwd.")}),
+                "num_heads": state[f"{stem}0.fgate.weight"].shape[0],  # fgate: Linear(input, heads)
+                "num_layers": len({k.split(".")[3] for k in state if k.startswith(stem)}),
+                "bidirectional": bidir,
             }
             input_size = q.shape[1]
         else:

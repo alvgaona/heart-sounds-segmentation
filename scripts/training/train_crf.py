@@ -93,6 +93,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--xlstm-heads", type=int, default=4, help="mLSTM heads per layer (must divide hidden)")
     parser.add_argument("--xlstm-layers", type=int, default=2, help="Number of stacked bidirectional mLSTM layers")
     parser.add_argument(
+        "--causal", action="store_true", help="xLSTM only: unidirectional (streamable) emitter instead of bidirectional"
+    )
+    parser.add_argument(
         "--boundary-loss",
         action="store_true",
         help="Add the S1-focused boundary-aware auxiliary loss (weighted per-frame CE on emissions) "
@@ -241,6 +244,7 @@ def run_split(
         hidden_size=args.xlstm_hidden,
         num_heads=args.xlstm_heads,
         num_layers=args.xlstm_layers,
+        bidirectional=not args.causal,
     )
     trainer = pl.Trainer(
         max_epochs=args.max_epochs,
