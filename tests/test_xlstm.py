@@ -153,3 +153,16 @@ def test_phase_encoder_shape_and_finite():
     y = enc(torch.randn(2, 60, 44))
     assert y.shape == (2, 60, 96)
     assert torch.isfinite(y).all()
+
+
+def test_phase_clock_init_is_physiological():
+    """The phase clock must start ~0.15 rad/frame (~72 bpm @ 50 Hz), not the ~0.69 (~330 bpm) of default init.
+
+    A too-fast clock makes the phase harmonics high-frequency noise the gates learn to ignore -> the
+    experiment would measure an inert phase, not the phase hypothesis. The weight is zeroed so the clock
+    is input-independent at init (input dependence is learned).
+    """
+    layer = PhaseClockMLSTMLayer(input_size=44, hidden_size=48, num_heads=4)
+    assert torch.count_nonzero(layer.rate.weight) == 0
+    rate = torch.nn.functional.softplus(layer.rate.bias).item()
+    assert 0.12 < rate < 0.18, f"init phase rate {rate:.3f} rad/frame is not physiological (~0.15)"

@@ -267,12 +267,28 @@ class PhaseClockMLSTMLayer(nn.Module):
     phase-augmented input, so it inherits the validated parallel==streaming operator.
     """
 
-    def __init__(self, input_size: int, hidden_size: int, num_heads: int = 4, n_harmonics: int = 2) -> None:
+    def __init__(
+        self, input_size: int, hidden_size: int, num_heads: int = 4, n_harmonics: int = 2, init_rate: float = 0.15
+    ) -> None:
         super().__init__()
         self.n_harmonics = n_harmonics
         self.hidden_size = hidden_size
         self.rate = nn.Linear(input_size, 1)
         self.inner = mLSTMLayer(input_size + 2 * n_harmonics, hidden_size, num_heads)
+        self.reset_phase_parameters(init_rate)
+
+    def reset_phase_parameters(self, init_rate: float = 0.15) -> None:
+        """Start the phase as an input-independent, physiologically-aligned cardiac clock.
+
+        ``init_rate`` is in rad/frame; 0.15 ≈ one cycle per ~42 frames ≈ 72 bpm at 50 Hz (scale by 50/fs
+        for other rates). Default nn.Linear init gives softplus(0) ≈ 0.69 rad/frame (~330 bpm) — the
+        phase would wrap ~5× too fast and read as high-frequency noise, so the mechanism could never
+        align. Zero the weight (input-independent clock at init; input dependence is learned) and set the
+        bias so ``softplus(bias) == init_rate``.
+        """
+        nn.init.zeros_(self.rate.weight)
+        with torch.no_grad():
+            self.rate.bias.fill_(math.log(math.expm1(init_rate)))
 
     def _phase_features(self, phi: torch.Tensor) -> torch.Tensor:
         """φ (..., ) -> (..., 2*n_harmonics) = [sin kφ, cos kφ]_{k=1..H}."""
@@ -304,13 +320,19 @@ class PhaseBidirectionalXLSTMEncoder(nn.Module):
     """Bidirectional stack of phase-clock mLSTM layers (Experiment C). Emits ``(B, T, 2*hidden_size)``."""
 
     def __init__(
-        self, input_size: int, hidden_size: int = 240, num_heads: int = 4, num_layers: int = 2, n_harmonics: int = 2
+        self,
+        input_size: int,
+        hidden_size: int = 240,
+        num_heads: int = 4,
+        num_layers: int = 2,
+        n_harmonics: int = 2,
+        init_rate: float = 0.15,
     ) -> None:
         super().__init__()
         self.hidden_size = hidden_size
         dims = [input_size] + [2 * hidden_size] * (num_layers - 1)
-        self.fwd = nn.ModuleList(PhaseClockMLSTMLayer(d, hidden_size, num_heads, n_harmonics) for d in dims)
-        self.bwd = nn.ModuleList(PhaseClockMLSTMLayer(d, hidden_size, num_heads, n_harmonics) for d in dims)
+        self.fwd = nn.ModuleList(PhaseClockMLSTMLayer(d, hidden_size, num_heads, n_harmonics, init_rate) for d in dims)
+        self.bwd = nn.ModuleList(PhaseClockMLSTMLayer(d, hidden_size, num_heads, n_harmonics, init_rate) for d in dims)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         for fwd, bwd in zip(self.fwd, self.bwd, strict=True):
