@@ -177,6 +177,27 @@ class mLSTMLayer(nn.Module):
         h = self.norm(h) * torch.sigmoid(self.ogate(x))
         return h
 
+    def init_state(self, batch: int, *, device=None, dtype=torch.float32) -> MLSTMState:
+        """Zero recurrent state for streaming (Experiment B)."""
+        return mlstm_init_state(batch, self.num_heads, self.head_dim, device=device, dtype=dtype)
+
+    def step(self, x_t: torch.Tensor, state: MLSTMState) -> tuple[torch.Tensor, MLSTMState]:
+        """One O(1) streaming step. ``x_t``: (B, input_size) -> h_t: (B, hidden_size), new state.
+
+        Numerically equal to the causal ``forward`` at the same position (validated in tests).
+        """
+        b = x_t.shape[0]
+        nh, dh = self.num_heads, self.head_dim
+        q_t = self.q(x_t).view(b, nh, dh, 1)  # same head split as _project, one frame
+        k_t = self.k(x_t).view(b, nh, dh, 1)
+        v_t = self.v(x_t).view(b, nh, dh, 1)
+        ig = self.igate(x_t).view(b, nh, 1, 1)
+        fg = self.fgate(x_t).view(b, nh, 1, 1)
+        h_t, new_state = mlstm_step(state, q_t, k_t, v_t, ig, fg)  # (B, NH, DH, 1)
+        h = h_t.reshape(b, self.hidden_size)
+        h = self.norm(h) * torch.sigmoid(self.ogate(x_t))
+        return h, new_state
+
 
 class BidirectionalXLSTMEncoder(nn.Module):
     """Drop-in replacement for the 2-layer BiLSTM emitter core.
@@ -199,3 +220,35 @@ class BidirectionalXLSTMEncoder(nn.Module):
             b = bwd(x.flip(1)).flip(1)
             x = torch.cat([f, b], dim=-1)
         return x
+
+
+class CausalXLSTMEncoder(nn.Module):
+    """Unidirectional (causal) mLSTM stack for streaming inference (Experiment B).
+
+    Emits ``(B, T, hidden_size)`` — half the width of the bidirectional encoder, since there is no
+    backward pass. ``forward`` (parallel, for training) and a chained ``step`` (O(1)/frame, constant
+    memory) are numerically identical; the streaming path enables real-time, on-device segmentation.
+    """
+
+    def __init__(self, input_size: int, hidden_size: int = 240, num_heads: int = 4, num_layers: int = 2) -> None:
+        super().__init__()
+        self.hidden_size = hidden_size
+        dims = [input_size] + [hidden_size] * (num_layers - 1)
+        self.layers = nn.ModuleList(mLSTMLayer(d, hidden_size, num_heads) for d in dims)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        for layer in self.layers:
+            x = layer(x)
+        return x
+
+    def init_state(self, batch: int, *, device=None, dtype=torch.float32) -> list[MLSTMState]:
+        return [layer.init_state(batch, device=device, dtype=dtype) for layer in self.layers]
+
+    def step(self, x_t: torch.Tensor, states: list[MLSTMState]) -> tuple[torch.Tensor, list[MLSTMState]]:
+        """One streaming frame: ``x_t`` (B, input_size) through all layers -> (B, hidden_size), new states."""
+        new_states: list[MLSTMState] = []
+        h = x_t
+        for layer, st in zip(self.layers, states, strict=True):
+            h, ns = layer.step(h, st)
+            new_states.append(ns)
+        return h, new_states

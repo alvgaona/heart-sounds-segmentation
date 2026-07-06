@@ -10,6 +10,7 @@ import torch
 
 from hss.model.xlstm import (
     BidirectionalXLSTMEncoder,
+    CausalXLSTMEncoder,
     mLSTMLayer,
     mlstm_init_state,
     mlstm_parallel,
@@ -97,3 +98,32 @@ def test_bidirectional_encoder_dropin_shape():
     y = enc(x)
     assert y.shape == (2, 100, 480)
     assert torch.isfinite(y).all()
+
+
+def test_causal_encoder_shape():
+    """Causal encoder is half the width (no backward pass): (B, T, hidden)."""
+    enc = CausalXLSTMEncoder(input_size=44, hidden_size=240, num_heads=4, num_layers=2)
+    y = enc(torch.randn(2, 100, 44))
+    assert y.shape == (2, 100, 240)
+    assert torch.isfinite(y).all()
+
+
+def test_causal_forward_equals_streaming_steps():
+    """Parallel causal forward must equal the O(1)/frame streaming step chain (the deployability path)."""
+    enc = CausalXLSTMEncoder(input_size=8, hidden_size=16, num_heads=4, num_layers=2).double().eval()
+    x = torch.randn(2, 32, 8, dtype=torch.float64)
+
+    y_par = enc(x)  # (B, T, hidden)
+
+    states = enc.init_state(2, dtype=torch.float64)
+    outs = []
+    for t in range(x.shape[1]):
+        h, states = enc.step(x[:, t], states)
+        outs.append(h)
+    y_stream = torch.stack(outs, dim=1)
+
+    # Agreement is at the eps-floor level (~1e-6): the layer uses the default eps=1e-6, and parallel
+    # vs recurrent differ by ~eps (see test_parallel_equals_recurrent, exact at eps=0). A projection
+    # bug would show an O(1) mismatch, not O(eps) — so this confirms the streaming wiring is correct.
+    max_diff = (y_par - y_stream).abs().max().item()
+    assert max_diff < 1e-5, f"causal forward vs streaming mismatch: {max_diff}"
