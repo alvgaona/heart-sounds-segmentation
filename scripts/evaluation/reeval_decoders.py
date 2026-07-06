@@ -29,6 +29,9 @@ DECODERS = ["viterbi", "marginal", "posterior"]
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model", choices=["crf", "tcn", "semi_crf"], required=True)
+    parser.add_argument(
+        "--arch", choices=["bilstm", "xlstm"], default="bilstm", help="emitter for --model crf (BiLSTM or xLSTM)"
+    )
     parser.add_argument("--log-dir", default=None, help="fold checkpoint root (default per model)")
     parser.add_argument("--fsst-path", default="data/springer_fsst/springer_fsst.pt")
     parser.add_argument("--downsample", type=int, default=20)
@@ -36,6 +39,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=68)
     parser.add_argument("--batch-size", type=int, default=50, help="must match the trained batch size for CRF")
     parser.add_argument("--accelerator", choices=["auto", "cpu", "gpu", "mps"], default="cpu")
+    add_split_args(parser)  # --split-by {frame,recording,patient}; must match how the checkpoints were trained
     return parser.parse_args()
 
 
@@ -104,17 +108,21 @@ def latest_ckpt(log_dir: str, fold: int) -> str | None:
     return max(paths, key=lambda p: int(re.search(r"version_(\d+)", p).group(1)))
 
 
-def load_segmenter(model_type: str, ckpt: str, device: torch.device, batch_size: int) -> torch.nn.Module:
+def load_segmenter(
+    model_type: str, ckpt: str, device: torch.device, batch_size: int, arch: str = "bilstm"
+) -> torch.nn.Module:
     if model_type == "crf":
         from hss.model.lit_model_crf import LitModelCRF
 
         # Infer input_size from the checkpoint (44 for FSST-only, 46 with envelope fusion) so both load.
+        # The xLSTM emitter has no lstm_1 buffer; read input_size from its first projection instead.
         state = torch.load(ckpt, map_location="cpu", weights_only=False)["state_dict"]
-        input_size = state["model.lstm_1.weight_ih_l0"].shape[1]
+        key = "model.encoder.fwd.0.q.weight" if arch == "xlstm" else "model.lstm_1.weight_ih_l0"
+        input_size = state[key].shape[1]
         lit = LitModelCRF.load_from_checkpoint(
-            ckpt, input_size=input_size, batch_size=batch_size, device=device, map_location=device
+            ckpt, input_size=input_size, batch_size=batch_size, device=device, arch=arch, map_location=device
         )
-    elif model_type == "lstm":
+    elif model_type in ("lstm", "lstm_valid"):
         from hss.model.lit_model import LitModel
 
         # Plain BiLSTM + softmax (the 2020 model): infer input_size the same way as the CRF above.
@@ -151,6 +159,13 @@ def decode_preds(net: torch.nn.Module, x: torch.Tensor, model_type: str) -> torc
     """
     if model_type == "lstm":
         return net(x).argmax(-1)
+    if model_type == "lstm_valid":
+        # Softmax LSTM run through the SAME constrained decoder the CRF uses (validate_and_correct_predictions
+        # over the per-frame log-softmax). Isolates whether the 100% valid-cycle benefit is the learned CRF or
+        # just the model-agnostic constrained decoder. net(x) is already log-softmax; validator returns 1-indexed.
+        from hss.utils.sequence_validator import validate_and_correct_predictions
+
+        return torch.as_tensor(validate_and_correct_predictions(net(x)), device=x.device) - 1
     return net.decode_valid(x)
 
 
@@ -186,7 +201,7 @@ def main(args: argparse.Namespace) -> None:
     features, labels = data["features"], data["labels"]
     if args.downsample > 1:
         features, labels = downsample_time(features, labels, args.downsample)
-    splits = kfold_indices(len(features), args.folds, args.seed)
+    splits = build_test_splits(len(features), args)  # honors --split-by (frame/recording/patient)
 
     results: dict[str, list[float]] = {d: [] for d in DECODERS}
     for i in range(args.folds):
@@ -195,7 +210,7 @@ def main(args: argparse.Namespace) -> None:
             print(f"fold {i + 1}: no checkpoint found, skipping")
             continue
         try:
-            net = load_segmenter(args.model, ckpt, device, args.batch_size)
+            net = load_segmenter(args.model, ckpt, device, args.batch_size, args.arch)
         except Exception as e:  # e.g. a checkpoint still being written by a running job
             print(f"fold {i + 1}: load failed ({type(e).__name__}), skipping")
             continue

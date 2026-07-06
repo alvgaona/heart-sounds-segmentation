@@ -35,7 +35,10 @@ SOUNDS = {"S1": 0, "S2": 2}  # onset of these states
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--model", choices=["crf", "lstm", "tcn", "semi_crf"], required=True)
+    parser.add_argument("--model", choices=["crf", "lstm", "lstm_valid", "tcn", "semi_crf"], required=True)
+    parser.add_argument(
+        "--arch", choices=["bilstm", "xlstm"], default="bilstm", help="emitter for --model crf (BiLSTM or xLSTM)"
+    )
     parser.add_argument("--log-dir", default=None)
     parser.add_argument("--fsst-path", default="data/springer_fsst/springer_fsst.pt")
     parser.add_argument(
@@ -108,7 +111,7 @@ def main(args: argparse.Namespace) -> None:
             print(f"fold {i + 1}: no checkpoint, skipping")
             continue
         try:
-            net = load_segmenter(args.model, ckpt, device, args.batch_size)
+            net = load_segmenter(args.model, ckpt, device, args.batch_size, args.arch)
         except Exception as e:
             print(f"fold {i + 1}: load failed ({type(e).__name__}), skipping")
             continue
