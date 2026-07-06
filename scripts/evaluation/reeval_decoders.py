@@ -118,17 +118,21 @@ def load_segmenter(
         state = torch.load(ckpt, map_location="cpu", weights_only=False)["state_dict"]
         if arch == "xlstm":
             # The xLSTM has no lstm_1 buffer: read its shape from the encoder so any config loads.
-            # Bidirectional keys live under encoder.fwd.*; causal (Experiment B) under encoder.layers.*.
-            bidir = any(k.startswith("model.encoder.fwd.") for k in state)
+            # Keys: bidirectional -> encoder.fwd.*; causal (Exp B) -> encoder.layers.*; phase (Exp C) adds
+            # encoder.fwd.*.rate + encoder.fwd.*.inner.* (projections see the phase-augmented input).
+            phase = any(k.endswith(".rate.weight") and "encoder" in k for k in state)
+            bidir = phase or any(k.startswith("model.encoder.fwd.") for k in state)
             stem = "model.encoder.fwd." if bidir else "model.encoder.layers."
-            q = state[f"{stem}0.q.weight"]  # (hidden_size, input_size)
+            proj = f"{stem}0.inner." if phase else f"{stem}0."
             extra = {
-                "hidden_size": q.shape[0],
-                "num_heads": state[f"{stem}0.fgate.weight"].shape[0],  # fgate: Linear(input, heads)
+                "hidden_size": state[f"{proj}q.weight"].shape[0],
+                "num_heads": state[f"{proj}fgate.weight"].shape[0],
                 "num_layers": len({k.split(".")[3] for k in state if k.startswith(stem)}),
                 "bidirectional": bidir,
+                "phase": phase,
             }
-            input_size = q.shape[1]
+            # rate projects the RAW input, so its in-features give input_size directly (phase-agnostic).
+            input_size = state[f"{stem}0.rate.weight"].shape[1] if phase else state[f"{proj}q.weight"].shape[1]
         else:
             ih = state["model.lstm_1.weight_ih_l0"]  # (4 * hidden_size, input_size) — LSTM has 4 gates
             extra = {"hidden_size": ih.shape[0] // 4}

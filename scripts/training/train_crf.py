@@ -96,6 +96,9 @@ def parse_args() -> argparse.Namespace:
         "--causal", action="store_true", help="xLSTM only: unidirectional (streamable) emitter instead of bidirectional"
     )
     parser.add_argument(
+        "--phase", action="store_true", help="xLSTM only: phase-clock mLSTM with a cardiac-phase inductive bias (Exp C)"
+    )
+    parser.add_argument(
         "--boundary-loss",
         action="store_true",
         help="Add the S1-focused boundary-aware auxiliary loss (weighted per-frame CE on emissions) "
@@ -245,6 +248,7 @@ def run_split(
         num_heads=args.xlstm_heads,
         num_layers=args.xlstm_layers,
         bidirectional=not args.causal,
+        phase=args.phase,
     )
     trainer = pl.Trainer(
         max_epochs=args.max_epochs,

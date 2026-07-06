@@ -252,3 +252,69 @@ class CausalXLSTMEncoder(nn.Module):
             h, ns = layer.step(h, st)
             new_states.append(ns)
         return h, new_states
+
+
+PhaseState = tuple[MLSTMState, torch.Tensor]  # (inner mLSTM state, phase clock φ)
+
+
+class PhaseClockMLSTMLayer(nn.Module):
+    """mLSTM layer with a learned monotonic cardiac-phase clock (Experiment C).
+
+    A per-frame nonnegative rate ``softplus(rate(x))`` accumulates into a phase ``φ_t = Σ rate`` (cumsum
+    in the parallel form, running sum in the streaming ``step``). The phase harmonics
+    ``[sin kφ, cos kφ]`` are concatenated to the input so the mLSTM gates get an explicit periodic /
+    duration-aware inductive bias aligned to the heartbeat. Wraps a plain ``mLSTMLayer`` on the
+    phase-augmented input, so it inherits the validated parallel==streaming operator.
+    """
+
+    def __init__(self, input_size: int, hidden_size: int, num_heads: int = 4, n_harmonics: int = 2) -> None:
+        super().__init__()
+        self.n_harmonics = n_harmonics
+        self.hidden_size = hidden_size
+        self.rate = nn.Linear(input_size, 1)
+        self.inner = mLSTMLayer(input_size + 2 * n_harmonics, hidden_size, num_heads)
+
+    def _phase_features(self, phi: torch.Tensor) -> torch.Tensor:
+        """φ (..., ) -> (..., 2*n_harmonics) = [sin kφ, cos kφ]_{k=1..H}."""
+        ks = torch.arange(1, self.n_harmonics + 1, device=phi.device, dtype=phi.dtype)
+        ang = phi.unsqueeze(-1) * ks
+        return torch.cat([ang.sin(), ang.cos()], dim=-1)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Parallel forward. ``x``: (B, T, input_size) -> (B, T, hidden_size)."""
+        rate = F.softplus(self.rate(x)).squeeze(-1)  # (B, T) nonnegative phase increments
+        phi = torch.cumsum(rate, dim=1)  # (B, T) accumulated cardiac phase
+        pe = self._phase_features(phi)  # (B, T, 2H)
+        return self.inner(torch.cat([x, pe], dim=-1))
+
+    def init_state(self, batch: int, *, device=None, dtype=torch.float32) -> PhaseState:
+        inner = self.inner.init_state(batch, device=device, dtype=dtype)
+        return inner, torch.zeros(batch, device=device, dtype=dtype)
+
+    def step(self, x_t: torch.Tensor, state: PhaseState) -> tuple[torch.Tensor, PhaseState]:
+        """One streaming frame: advance the phase clock, then the inner mLSTM step."""
+        inner_state, phi = state
+        phi = phi + F.softplus(self.rate(x_t)).squeeze(-1)  # (B,)
+        pe = self._phase_features(phi)  # (B, 2H)
+        h, new_inner = self.inner.step(torch.cat([x_t, pe], dim=-1), inner_state)
+        return h, (new_inner, phi)
+
+
+class PhaseBidirectionalXLSTMEncoder(nn.Module):
+    """Bidirectional stack of phase-clock mLSTM layers (Experiment C). Emits ``(B, T, 2*hidden_size)``."""
+
+    def __init__(
+        self, input_size: int, hidden_size: int = 240, num_heads: int = 4, num_layers: int = 2, n_harmonics: int = 2
+    ) -> None:
+        super().__init__()
+        self.hidden_size = hidden_size
+        dims = [input_size] + [2 * hidden_size] * (num_layers - 1)
+        self.fwd = nn.ModuleList(PhaseClockMLSTMLayer(d, hidden_size, num_heads, n_harmonics) for d in dims)
+        self.bwd = nn.ModuleList(PhaseClockMLSTMLayer(d, hidden_size, num_heads, n_harmonics) for d in dims)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        for fwd, bwd in zip(self.fwd, self.bwd, strict=True):
+            f = fwd(x)
+            b = bwd(x.flip(1)).flip(1)
+            x = torch.cat([f, b], dim=-1)
+        return x

@@ -11,6 +11,8 @@ import torch
 from hss.model.xlstm import (
     BidirectionalXLSTMEncoder,
     CausalXLSTMEncoder,
+    PhaseBidirectionalXLSTMEncoder,
+    PhaseClockMLSTMLayer,
     mLSTMLayer,
     mlstm_init_state,
     mlstm_parallel,
@@ -127,3 +129,27 @@ def test_causal_forward_equals_streaming_steps():
     # bug would show an O(1) mismatch, not O(eps) — so this confirms the streaming wiring is correct.
     max_diff = (y_par - y_stream).abs().max().item()
     assert max_diff < 1e-5, f"causal forward vs streaming mismatch: {max_diff}"
+
+
+def test_phase_clock_forward_equals_streaming():
+    """Phase-clock layer: parallel forward (cumsum phase) == streaming step (running-sum phase)."""
+    layer = PhaseClockMLSTMLayer(input_size=8, hidden_size=16, num_heads=4, n_harmonics=2).double().eval()
+    x = torch.randn(2, 24, 8, dtype=torch.float64)
+
+    y_par = layer(x)
+
+    state = layer.init_state(2, dtype=torch.float64)
+    outs = []
+    for t in range(x.shape[1]):
+        h, state = layer.step(x[:, t], state)
+        outs.append(h)
+    y_stream = torch.stack(outs, dim=1)
+
+    assert (y_par - y_stream).abs().max().item() < 1e-5
+
+
+def test_phase_encoder_shape_and_finite():
+    enc = PhaseBidirectionalXLSTMEncoder(input_size=44, hidden_size=48, num_heads=4, num_layers=2)
+    y = enc(torch.randn(2, 60, 44))
+    assert y.shape == (2, 60, 96)
+    assert torch.isfinite(y).all()
