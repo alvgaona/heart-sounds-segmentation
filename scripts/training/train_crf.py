@@ -99,6 +99,9 @@ def parse_args() -> argparse.Namespace:
         "--phase", action="store_true", help="xLSTM only: phase-clock mLSTM with a cardiac-phase inductive bias (Exp C)"
     )
     parser.add_argument(
+        "--multirate", action="store_true", help="xLSTM only: multi-rate temporal pyramid (fine/meso/coarse, Exp D)"
+    )
+    parser.add_argument(
         "--train-fraction",
         type=float,
         default=1.0,
@@ -269,6 +272,7 @@ def run_split(
         num_layers=args.xlstm_layers,
         bidirectional=not args.causal,
         phase=args.phase,
+        multirate=args.multirate,
     )
     trainer = pl.Trainer(
         max_epochs=args.max_epochs,

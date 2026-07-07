@@ -15,7 +15,12 @@ import torch
 from torch import nn
 
 from hss.model.crf import CRF
-from hss.model.xlstm import BidirectionalXLSTMEncoder, CausalXLSTMEncoder, PhaseBidirectionalXLSTMEncoder
+from hss.model.xlstm import (
+    BidirectionalXLSTMEncoder,
+    CausalXLSTMEncoder,
+    MultiRateXLSTMEncoder,
+    PhaseBidirectionalXLSTMEncoder,
+)
 from hss.utils.sequence_validator import validate_and_correct_predictions
 
 
@@ -44,6 +49,8 @@ class HeartSoundSegmenterXLSTMCRF(nn.Module):
         dropout: float = 0.2,
         bidirectional: bool = True,
         phase: bool = False,
+        multirate: bool = False,
+        rates: tuple[int, ...] = (1, 4, 16),
         device: torch.device | None = None,
         dtype: torch.dtype = torch.float32,
     ) -> None:
@@ -54,8 +61,13 @@ class HeartSoundSegmenterXLSTMCRF(nn.Module):
         self.num_tags = 4  # S1, Systole, S2, Diastole
         self.bidirectional = bidirectional
         self.phase = phase
+        self.multirate = multirate
 
-        if phase:
+        if multirate:
+            # Multi-rate temporal pyramid (Experiment D): fine/meso/coarse timescales, concatenated.
+            self.encoder = MultiRateXLSTMEncoder(input_size, hidden_size, num_heads, num_layers, rates)
+            enc_out = hidden_size * 2 * len(rates)
+        elif phase:
             # Phase-clock mLSTM (Experiment C): cardiac-phase inductive bias inside the recurrence.
             self.encoder = PhaseBidirectionalXLSTMEncoder(input_size, hidden_size, num_heads, num_layers)
             enc_out = hidden_size * 2

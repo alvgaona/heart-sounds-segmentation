@@ -222,6 +222,52 @@ class BidirectionalXLSTMEncoder(nn.Module):
         return x
 
 
+def _pool_time(x: torch.Tensor, rate: int) -> torch.Tensor:
+    """Average-pool (B, T, C) along time by ``rate`` (ceil_mode keeps a partial tail window)."""
+    if rate == 1:
+        return x
+    return F.avg_pool1d(x.transpose(1, 2), kernel_size=rate, stride=rate, ceil_mode=True).transpose(1, 2)
+
+
+def _upsample_time(y: torch.Tensor, rate: int, t: int) -> torch.Tensor:
+    """Repeat-upsample (B, T//rate, C) back to length ``t`` (each coarse frame repeated ``rate`` times)."""
+    if rate == 1:
+        return y
+    return y.repeat_interleave(rate, dim=1)[:, :t]
+
+
+class MultiRateXLSTMEncoder(nn.Module):
+    """Temporal pyramid of bidirectional mLSTMs at several rates (Experiment D).
+
+    One bidirectional mLSTM per rate — fine (S1/S2 morphology), meso (within-cycle), coarse (rhythm) —
+    each run on the average-pooled input, repeat-upsampled back to full length, and concatenated. Emits
+    ``(B, T, 2 * hidden_size * len(rates))``. The recurrent analog of TopSeg's multi-scale features;
+    targets transfer / data-efficiency (the non-saturated axes).
+    """
+
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int = 240,
+        num_heads: int = 4,
+        num_layers: int = 1,
+        rates: tuple[int, ...] = (1, 4, 16),
+    ) -> None:
+        super().__init__()
+        self.rates = tuple(rates)
+        self.hidden_size = hidden_size
+        self.levels = nn.ModuleList(
+            BidirectionalXLSTMEncoder(input_size, hidden_size, num_heads, num_layers) for _ in self.rates
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        t = x.shape[1]
+        outs = []
+        for rate, level in zip(self.rates, self.levels, strict=True):
+            outs.append(_upsample_time(level(_pool_time(x, rate)), rate, t))
+        return torch.cat(outs, dim=-1)
+
+
 class CausalXLSTMEncoder(nn.Module):
     """Unidirectional (causal) mLSTM stack for streaming inference (Experiment B).
 

@@ -11,8 +11,11 @@ import torch
 from hss.model.xlstm import (
     BidirectionalXLSTMEncoder,
     CausalXLSTMEncoder,
+    MultiRateXLSTMEncoder,
     PhaseBidirectionalXLSTMEncoder,
     PhaseClockMLSTMLayer,
+    _pool_time,
+    _upsample_time,
     mLSTMLayer,
     mlstm_init_state,
     mlstm_parallel,
@@ -166,3 +169,19 @@ def test_phase_clock_init_is_physiological():
     assert torch.count_nonzero(layer.rate.weight) == 0
     rate = torch.nn.functional.softplus(layer.rate.bias).item()
     assert 0.12 < rate < 0.18, f"init phase rate {rate:.3f} rad/frame is not physiological (~0.15)"
+
+
+def test_pool_upsample_time():
+    x = torch.randn(2, 100, 8)
+    assert torch.equal(_pool_time(x, 1), x)  # rate 1 is identity
+    assert _pool_time(x, 4).shape == (2, 25, 8)  # 100/4
+    assert _pool_time(x, 16).shape == (2, 7, 8)  # ceil(100/16)
+    assert _upsample_time(_pool_time(x, 16), 16, 100).shape == (2, 100, 8)  # round-trip to T
+
+
+def test_multirate_encoder_shape():
+    """Multi-rate pyramid emits (B, T, 2*hidden*len(rates)); each level captures a timescale."""
+    enc = MultiRateXLSTMEncoder(input_size=44, hidden_size=48, num_heads=4, num_layers=1, rates=(1, 4, 16))
+    y = enc(torch.randn(2, 100, 44))
+    assert y.shape == (2, 100, 2 * 48 * 3)
+    assert torch.isfinite(y).all()
