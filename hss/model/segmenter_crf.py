@@ -4,7 +4,34 @@ import torch
 from torch import nn
 
 from hss.model.crf import CRF
+from hss.model.xlstm import _pool_time, _upsample_time
 from hss.utils.sequence_validator import validate_and_correct_predictions
+
+
+class MultiRateBiLSTMEncoder(nn.Module):
+    """Temporal pyramid of bidirectional LSTMs at several rates (Experiment D, BiLSTM base).
+
+    Mirror of ``MultiRateXLSTMEncoder`` but with a plain ``nn.LSTM`` per rate — isolates the multi-scale
+    hierarchy from the emitter (BiLSTM is the accuracy leader). Emits ``(B, T, 2 * hidden * len(rates))``.
+    """
+
+    def __init__(
+        self, input_size: int, hidden_size: int = 240, num_layers: int = 1, rates: tuple[int, ...] = (1, 4, 16)
+    ) -> None:
+        super().__init__()
+        self.rates = tuple(rates)
+        self.levels = nn.ModuleList(
+            nn.LSTM(input_size, hidden_size, num_layers=num_layers, bidirectional=True, batch_first=True)
+            for _ in self.rates
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        t = x.shape[1]
+        outs = []
+        for rate, level in zip(self.rates, self.levels, strict=True):
+            y, _ = level(_pool_time(x, rate))
+            outs.append(_upsample_time(y, rate, t))
+        return torch.cat(outs, dim=-1)
 
 
 class HeartSoundSegmenterCRF(nn.Module):
@@ -32,6 +59,9 @@ class HeartSoundSegmenterCRF(nn.Module):
         batch_size: int = 1,
         hidden_size: int = 240,
         bidirectional: bool = True,
+        multirate: bool = False,
+        num_layers: int = 1,
+        rates: tuple[int, ...] = (1, 4, 16),
         device: torch.device | None = None,
         dtype: torch.dtype = torch.float32,
     ) -> None:
@@ -40,37 +70,36 @@ class HeartSoundSegmenterCRF(nn.Module):
         self.device = device if device is not None else torch.device("cpu")
         self.batch_size = batch_size
         self.num_tags = 4  # S1, Systole, S2, Diastole
-
-        D = 2 if bidirectional else 1
-
-        self.register_buffer("h0", torch.randn(D, batch_size, hidden_size, device=self.device, dtype=dtype))
-        self.register_buffer("c0", torch.randn(D, batch_size, hidden_size, device=self.device, dtype=dtype))
-
-        self.lstm_1 = nn.LSTM(
-            input_size=input_size,
-            hidden_size=hidden_size,
-            bidirectional=bidirectional,
-            batch_first=True,
-            device=self.device,
-            dtype=dtype,
-        )
-        self.lstm_2 = nn.LSTM(
-            input_size=hidden_size * 2,
-            hidden_size=hidden_size,
-            bidirectional=bidirectional,
-            batch_first=True,
-            device=self.device,
-            dtype=dtype,
-        )
+        self.multirate = multirate
         self.dropout = nn.Dropout(0.2)
         self.relu = nn.ReLU()
-        self.linear = nn.Linear(
-            in_features=hidden_size * 2,
-            out_features=self.num_tags,
-            bias=True,
-            device=self.device,
-            dtype=dtype,
-        )
+
+        if multirate:
+            # Multi-rate temporal pyramid (Experiment D) — no h0/c0; the encoder owns its LSTM state.
+            self.encoder = MultiRateBiLSTMEncoder(input_size, hidden_size, num_layers, rates)
+            linear_in = hidden_size * 2 * len(rates)
+        else:
+            D = 2 if bidirectional else 1
+            self.register_buffer("h0", torch.randn(D, batch_size, hidden_size, device=self.device, dtype=dtype))
+            self.register_buffer("c0", torch.randn(D, batch_size, hidden_size, device=self.device, dtype=dtype))
+            self.lstm_1 = nn.LSTM(
+                input_size=input_size,
+                hidden_size=hidden_size,
+                bidirectional=bidirectional,
+                batch_first=True,
+                device=self.device,
+                dtype=dtype,
+            )
+            self.lstm_2 = nn.LSTM(
+                input_size=hidden_size * 2,
+                hidden_size=hidden_size,
+                bidirectional=bidirectional,
+                batch_first=True,
+                device=self.device,
+                dtype=dtype,
+            )
+            linear_in = hidden_size * 2
+        self.linear = nn.Linear(in_features=linear_in, out_features=self.num_tags, bias=True)
 
         # CRF layer for sequence modeling
         self.crf = CRF(num_tags=self.num_tags)
@@ -120,6 +149,8 @@ class HeartSoundSegmenterCRF(nn.Module):
         Returns:
             Emission scores of shape (batch_size, sequence_length, num_tags)
         """
+        if self.multirate:
+            return self.linear(self.dropout(self.encoder(x)))
         # Slice h0/c0 to the actual batch size so partial batches (last CV/test batch) work, and
         # .contiguous() because a sliced view is non-contiguous, which the CUDA LSTM kernel rejects.
         h0 = self.h0[:, : x.shape[0], :].contiguous()

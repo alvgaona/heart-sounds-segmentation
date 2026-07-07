@@ -143,6 +143,13 @@ def load_segmenter(
                 }
                 # rate projects the RAW input, so its in-features give input_size directly (phase-agnostic).
                 input_size = state[f"{stem}0.rate.weight"].shape[1] if phase else state[f"{proj}q.weight"].shape[1]
+        elif any(k.startswith("model.encoder.levels.") for k in state):
+            # Multi-rate BiLSTM (Exp D, BiLSTM base): encoder.levels.<i>.weight_ih_l<j>[_reverse]
+            ih = state["model.encoder.levels.0.weight_ih_l0"]  # (4 * hidden_size, input_size)
+            lkeys = [k for k in state if k.startswith("model.encoder.levels.0.weight_ih_l")]
+            nlayers = len({k.rsplit("_l", 1)[1].split("_")[0] for k in lkeys})
+            extra = {"hidden_size": ih.shape[0] // 4, "num_layers": nlayers, "multirate": True}
+            input_size = ih.shape[1]
         else:
             ih = state["model.lstm_1.weight_ih_l0"]  # (4 * hidden_size, input_size) — LSTM has 4 gates
             extra = {"hidden_size": ih.shape[0] // 4}

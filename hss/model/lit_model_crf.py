@@ -52,6 +52,8 @@ class LitModelCRF(pl.LightningModule):
                 batch_size=batch_size,
                 device=device,
                 hidden_size=hidden_size,
+                multirate=multirate,
+                num_layers=num_layers,
             )
         else:
             raise ValueError(f"unknown arch {arch!r} (expected 'bilstm' or 'xlstm')")
