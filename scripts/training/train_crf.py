@@ -99,6 +99,13 @@ def parse_args() -> argparse.Namespace:
         "--phase", action="store_true", help="xLSTM only: phase-clock mLSTM with a cardiac-phase inductive bias (Exp C)"
     )
     parser.add_argument(
+        "--train-fraction",
+        type=float,
+        default=1.0,
+        help="Fraction of TRAIN patients to keep for a data-efficiency sweep (val/test stay full). "
+        "Patient-level, nested, seeded (use with --split-by patient).",
+    )
+    parser.add_argument(
         "--boundary-loss",
         action="store_true",
         help="Add the S1-focused boundary-aware auxiliary loss (weighted per-frame CE on emissions) "
@@ -169,11 +176,15 @@ def get_device(accelerator: str) -> tuple[torch.device, str]:
     return torch.device("cpu"), "cpu"
 
 
-def kfold_indices(n: int, k: int, seed: int) -> list[tuple[list[int], list[int], list[int]]]:
+def kfold_indices(
+    n: int, k: int, seed: int, train_fraction: float = 1.0
+) -> list[tuple[list[int], list[int], list[int]]]:
     """Build (train, val, test) index splits for k-fold CV.
 
     Test is the held-out fold; val is 15% of the remaining data (for early stopping); train is the
     rest. The 15% carve keeps train non-empty for any k >= 2. Deterministic given the seed.
+    ``train_fraction`` < 1 keeps a nested seeded prefix of train (frame-level; use the grouped/patient
+    variant for a leakage-safe data-efficiency sweep).
     """
     perm = torch.randperm(n, generator=torch.Generator().manual_seed(seed)).tolist()
     folds = [perm[i::k] for i in range(k)]  # round-robin partition, disjoint and covering
@@ -183,11 +194,15 @@ def kfold_indices(n: int, k: int, seed: int) -> list[tuple[list[int], list[int],
         rest = [idx for j, f in enumerate(folds) if j != i for idx in f]
         val_size = int(0.15 * len(rest))
         val_idx, train_idx = rest[:val_size], rest[val_size:]
+        if train_fraction < 1.0:
+            train_idx = train_idx[: max(1, round(train_fraction * len(train_idx)))]
         splits.append((train_idx, val_idx, test_idx))
     return splits
 
 
-def grouped_kfold_indices(group_ids: torch.Tensor, k: int, seed: int) -> list[tuple[list[int], list[int], list[int]]]:
+def grouped_kfold_indices(
+    group_ids: torch.Tensor, k: int, seed: int, train_fraction: float = 1.0
+) -> list[tuple[list[int], list[int], list[int]]]:
     """K-fold splits that keep every group's frames in a single fold (no leakage across the group boundary).
 
     A group is a recording or a patient. Splits the GROUPS round-robin (like kfold_indices splits frames),
@@ -210,7 +225,12 @@ def grouped_kfold_indices(group_ids: torch.Tensor, k: int, seed: int) -> list[tu
         test = folds[i]
         rest = [g for j, f in enumerate(folds) if j != i for g in f]
         val_size = int(0.15 * len(rest))
-        splits.append((to_frames(rest[val_size:]), to_frames(rest[:val_size]), to_frames(test)))
+        val_groups, train_groups = rest[:val_size], rest[val_size:]
+        if train_fraction < 1.0:
+            # Data-efficiency sweep: keep a nested, seeded prefix of the (already-shuffled) train patients.
+            # val/test stay full, so only the training-label budget shrinks. 0.05 ⊂ 0.1 ⊂ ... (nested).
+            train_groups = train_groups[: max(1, round(train_fraction * len(train_groups)))]
+        splits.append((to_frames(train_groups), to_frames(val_groups), to_frames(test)))
     return splits
 
 
@@ -343,11 +363,11 @@ def main(args: argparse.Namespace) -> None:
         group_ids = torch.load(index_path, weights_only=True)
         if len(group_ids) != n:
             raise ValueError(f"{args.split_by} index has {len(group_ids)} frames, features have {n}")
-        fold_splits = grouped_kfold_indices(group_ids, args.folds, args.seed)
+        fold_splits = grouped_kfold_indices(group_ids, args.folds, args.seed, args.train_fraction)
         n_groups = len(torch.unique(group_ids))
         print(f"{args.split_by.capitalize()}-level splits: {n_groups} groups across {args.folds} folds")
     else:
-        fold_splits = kfold_indices(n, args.folds, args.seed)
+        fold_splits = kfold_indices(n, args.folds, args.seed, args.train_fraction)
 
     all_results: list[dict[str, float]] = []
     for i, split in enumerate(fold_splits):
